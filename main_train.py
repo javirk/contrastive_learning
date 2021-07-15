@@ -78,6 +78,6 @@ if __name__ == '__main__':
         data_path = Path('/storage/homefs/jg20n729/OCT_Detection/Datasets')
         num_workers = 8
 
-    root_path = Path(__file__).resolve().parents[0]
+    root_path = Path(__file__).resolve().parents[1]
 
     main()
