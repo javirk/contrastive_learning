@@ -36,7 +36,7 @@ def main():
     model = load_pretrained_backbone(config, model, device=device)
     model = load_pretrained_aspp(config, model, device=device)
     model, opt, start_epoch = load_checkpoint(config, model, opt, device=device)
-    ckpt_path = file_path.joinpath('ckpts', f'{current_time}.pth')
+    ckpt_path = root_path.joinpath('ckpts', f'{current_time}.pth')
 
     metrics = {}
     print(f'Defined metrics {metrics}')
@@ -69,7 +69,6 @@ if __name__ == '__main__':
 
     FLAGS, unparsed = parser.parse_known_args()
     config = read_config(FLAGS.config)
-    file_path = Path(__file__)
 
     if FLAGS.ubelix == 0:
         data_path = Path(__file__).parents[2].joinpath('Datasets')
@@ -78,6 +77,6 @@ if __name__ == '__main__':
         data_path = Path('/storage/homefs/jg20n729/OCT_Detection/Datasets')
         num_workers = 8
 
-    root_path = Path(__file__).resolve().parents[1]
+    root_path = Path(__file__).resolve().parents[0]
 
     main()
