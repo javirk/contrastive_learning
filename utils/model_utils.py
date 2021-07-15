@@ -12,7 +12,7 @@ def load_pretrained_backbone(config, model, device='cpu'):
     elif config['backbone_kwargs']['pretraining']:
         filename = config['backbone_kwargs']['pretraining']
         print(f'Loading weights from file {filename}')
-        pretrained_path = Path(__file__).resolve().parents[1].joinpath('pretrained_models', filename)
+        pretrained_path = Path(__file__).resolve().parents[1].joinpath('pretrain', filename)
         if not os.path.exists(pretrained_path):
             pretrained_path = Path(__file__).resolve().parents[1].joinpath('weights', filename)
 
