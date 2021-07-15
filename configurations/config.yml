@@ -1,0 +1,42 @@
+num_classes: 3
+train_batch_size: 8
+
+# Model
+model: deeplab
+backbone: resnet50
+backbone_kwargs:
+  dilated: True
+  pretraining: resnet50_dilation.pth  # Filename of the pretraining weights (only backbone)
+model_kwargs:
+  ndim: 32
+  upsample: True
+  use_classification_head: True
+  classify_embedding: True
+  pretraining: imagenet
+
+checkpoint: None
+
+# MoCo
+moco_kwargs:
+   T: 0.5 # Temperature
+   m: 0.999 # Momentum
+   K: 128 # Negatives
+
+# Optimizer:
+epochs: 10
+optimizer: sgd
+optimizer_kwargs:
+   lr: 0.004
+   weight_decay: 0.0001
+   momentum: 0.9
+   nesterov: False
+scheduler: poly
+
+
+# Loss
+loss_kwargs:
+  reduction: mean
+
+# Train:
+train_kwargs:
+  writing_per_epoch: 10
