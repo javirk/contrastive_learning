@@ -187,3 +187,8 @@ def concat_all_gather(tensor):
 
     output = torch.cat(tensors_gather, dim=0)
     return output
+
+
+if __name__ == '__main__':
+
+    model = ContrastiveModel()

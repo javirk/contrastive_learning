@@ -36,7 +36,7 @@ def main():
     model = load_pretrained_backbone(config, model, device=device)
     model = load_pretrained_aspp(config, model, device=device)
     model, opt, start_epoch = load_checkpoint(config, model, opt, device=device)
-    ckpt_path = file_path.joinpath('ckpts', current_time.pth)
+    ckpt_path = file_path.joinpath('ckpts', f'{current_time}.pth')
 
     metrics = {}
     print(f'Defined metrics {metrics}')

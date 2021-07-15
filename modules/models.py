@@ -20,14 +20,15 @@ class ContrastiveSegmentationModel(nn.Module):
                                                      nn.Flatten(),
                                                      nn.Linear(ndim, num_classes))
         if self.classify_embedding:  # Are the vectors that come from the encoder classified?
-            self.fc_new = nn.Linear(2048, num_classes)
+            self.backbone.fc_new = nn.Linear(2048, 10)  ## TODO: Change this to num_classes. 10 only for testing
+            del self.backbone.fc
 
 
     def forward_embeddings(self, x):
         b, c, h, w = x.shape
         x = rearrange(x, 'b c h w -> (b h w) c')
 
-        x = self.fc_new(x)
+        x = self.backbone.fc_new(x)
         y = rearrange(x, '(b h w) o -> b o h w', b=b, h=h, w=w)
         return y
 
