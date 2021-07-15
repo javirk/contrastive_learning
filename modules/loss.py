@@ -16,10 +16,9 @@ class ContrastiveLearningLoss(nn.Module):
         """
         positive_similarity = positive_similarity.squeeze(-1)
 
-        num = torch.exp(positive_similarity)
-        den = torch.exp(torch.sum(negative_similarity, dim=-1))
+        den = torch.sum(torch.exp(negative_similarity), dim=-1)
 
-        l = - torch.log(num / den)
+        l = - positive_similarity + torch.log(den)
 
         if self.reduction == 'mean':
             return torch.mean(l)

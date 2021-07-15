@@ -33,7 +33,6 @@ def load_pretrained_aspp(config, model, device='cpu'):
     if config['model_kwargs']['pretraining'] == 'imagenet':
         print('Imagenet weights will be loaded for the head')
         state_dict_head = torch.load('pretrain/aspp_imagenet.pth', map_location=device)
-        # model.module.head.load_state_dict(state_dict_head, strict=False)
         model.model_q.decoder.load_state_dict(state_dict_head, strict=False)  # strict=False because of last layer classes
         model.model_k.decoder.load_state_dict(state_dict_head, strict=False)
 
