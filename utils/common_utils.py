@@ -108,6 +108,8 @@ def sample_results(model, dataset, num_classes, writer, epoch_num, number_images
         input_batch = ((input_batch + 1) / 2 * 255.).type(torch.uint8)
         pred_batch = segmentation_to_onehot(pred_batch, num_classes)
 
+        input_batch = input_batch.to(pred_batch.device)
+
         o.append(torchvision.utils.draw_segmentation_masks(input_batch[0], pred_batch[0]))
 
     write_image_tb(writer, o, epoch_num, 'Segmentation')
