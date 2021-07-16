@@ -182,7 +182,7 @@ class ContrastiveModel(nn.Module):
         b, c, h, w = segmentation.shape
         segmentation = rearrange(segmentation, 'b c h w -> (b h w) c')
 
-        segmentation = self.kmeans.fit_predict(segmentation.numpy())
+        segmentation = self.kmeans.fit_predict(segmentation.cpu().numpy())
         segmentation_class = rearrange(torch.from_numpy(segmentation), '(b h w) -> b h w', b=b, h=h, w=w)
         return segmentation_class
 
