@@ -1,7 +1,7 @@
 from utils.common_utils import read_config, prepare_run
 from modules.moco.builder import ContrastiveModel
 from data.data_retriever import ContrastiveDataset
-from utils.common_utils import get_train_transformations, get_optimizer, adjust_learning_rate
+from utils.common_utils import get_train_transformations, get_optimizer, adjust_learning_rate, sample_results
 import torch
 import torch.nn as nn
 import argparse
@@ -48,7 +48,11 @@ def main():
         print('Adjusted learning rate to {:.5f}'.format(lr))
 
         print('Train...')
-        model, i = train_epoch(model, dataloader, label_criterion, opt, metrics, writing_freq, writer, epoch, device)
+        # model, i = train_epoch(model, dataloader, label_criterion, opt, metrics, writing_freq, writer, epoch, device)
+
+        print('Sample results...')
+        sample_results(model, dataset, config['num_classes'], writer, epoch,
+                       config['train_kwargs']['saved_images_per_epoch'], device)
 
         torch.save({'optimizer': opt.state_dict(), 'model': model.state_dict(), 'epoch': epoch + 1}, ckpt_path)
 

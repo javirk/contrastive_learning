@@ -4,9 +4,11 @@ from pathlib import Path
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import shutil
+import torchvision
 import torchvision.transforms as transforms
 import math
 import numpy as np
+from utils.logs_utils import write_image_tb
 
 
 def copy_file(src, dst):
@@ -77,3 +79,35 @@ def adjust_learning_rate(p, optimizer, epoch):
         param_group['lr'] = lr
 
     return lr
+
+
+def segmentation_to_onehot(seg, num_classes):
+    """
+    Turns a segmentation in the format NxHxW to NxCxHxW (one hot)
+    :param seg: torch.Tensor. Shape NxHxW
+    :param num_classes: int. Number of classes
+    :return: Boolean torch.Tensor with shape NxCxHxW. It's boolean because torchvision.utils.draw_segmentation_masks
+    wants it that way
+    """
+    seg = seg.long()
+    if len(seg.shape) == 3:
+        seg = seg.unsqueeze(1)
+    one_hot = torch.FloatTensor(seg.size(0), num_classes, seg.size(2), seg.size(3)).zero_()
+    one_hot.scatter_(1, seg, 1)
+    return one_hot.bool()
+
+
+def sample_results(model, dataset, num_classes, writer, epoch_num, number_images, device):
+    model.eval()
+    im_idx = np.random.randint(0, len(dataset), number_images)
+    o = []
+    for i in im_idx:
+        input_batch = dataset[i]['images'].unsqueeze(0).to(device)
+
+        pred_batch = model.forward_validation(input_batch)
+        input_batch = ((input_batch + 1) / 2 * 255.).type(torch.uint8)
+        pred_batch = segmentation_to_onehot(pred_batch, num_classes)
+
+        o.append(torchvision.utils.draw_segmentation_masks(input_batch[0], pred_batch[0]))
+
+    write_image_tb(writer, o, epoch_num, 'Segmentation')

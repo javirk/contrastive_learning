@@ -3,7 +3,6 @@ from utils.logs_utils import write_to_tb, update_metrics_dict
 
 
 def train_step(data, model, criterion, optimizer, metrics, device):
-    model.train()
     optimizer.zero_grad()
 
     input_batch = data['images'].to(device)
@@ -35,14 +34,14 @@ def train_step(data, model, criterion, optimizer, metrics, device):
 
 
 def validation_step(data, model, criterion, metrics, device):
-    # TODO: Change all this function
-    model.eval()
+    # TODO: Change all this function. I don't know what validation I should have here because
+    # the predicted labels can be very different to the GT ones.
+    raise NotImplementedError
 
     input_batch = data['images'].to(device)
     gt = data['labels'].to(device)
 
-    with torch.no_grad():
-        out = model(input_batch)['im']
+    model.forward_validation(input_batch)
 
     loss = criterion(out, gt).detach()
 
@@ -62,6 +61,7 @@ def validation_step(data, model, criterion, metrics, device):
 
 
 def train_epoch(model, loader, criterion, optimizer, metrics, writing_freq, writer, epoch_num, device):
+    model.train()
     running_loss = 0.
     running_clloss = 0.
     running_metrics = {k: 0 for k in metrics.keys()}
@@ -92,6 +92,7 @@ def train_epoch(model, loader, criterion, optimizer, metrics, writing_freq, writ
 
 
 def validate_epoch(model, loader, criterion, metrics, writer, epoch_num, device):
+    model.eval()
     running_loss = 0.
     running_metrics = {k: 0 for k in metrics.keys()}
     for data in loader:

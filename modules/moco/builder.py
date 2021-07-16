@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
+from sklearn.cluster import KMeans
 
 from modules.loss import ContrastiveLearningLoss
 from utils.model_utils import get_model
@@ -36,6 +37,8 @@ class ContrastiveModel(nn.Module):
         self.queue = nn.functional.normalize(self.queue, dim=0)
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
+
+        self.kmeans = KMeans(n_clusters=p['num_classes'])
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
@@ -172,6 +175,16 @@ class ContrastiveModel(nn.Module):
         self._dequeue_and_enqueue(k)
 
         return cl_loss, class_prediction
+
+    @torch.no_grad()
+    def forward_validation(self, im):
+        segmentation = self.model_q(im)['seg']
+        b, c, h, w = segmentation.shape
+        segmentation = rearrange(segmentation, 'b c h w -> (b h w) c')
+
+        segmentation = self.kmeans.fit_predict(segmentation.numpy())
+        segmentation_class = rearrange(torch.from_numpy(segmentation), '(b h w) -> b h w', b=b, h=h, w=w)
+        return segmentation_class
 
 
 # utils

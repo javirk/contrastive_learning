@@ -20,7 +20,7 @@ class ContrastiveSegmentationModel(nn.Module):
                                                      nn.Flatten(),
                                                      nn.Linear(ndim, num_classes))
         if self.classify_embedding:  # Are the vectors that come from the encoder classified?
-            self.backbone.fc_new = nn.Linear(2048, 10)  ## TODO: Change this to num_classes. 10 only for testing
+            self.backbone.fc_new = nn.Linear(2048, num_classes)
             del self.backbone.fc
 
 

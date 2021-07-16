@@ -30,10 +30,10 @@ class Resize:
 
 class SegmentationDataset(Dataset):
     """Segmentation dataset.
-        (0=Background, 1=IRF, 2=SRF, 3="PED").
+        File has 0=Background, 1=IRF, 2=SRF, 3="PED"
     """
 
-    def __init__(self, volume_file, segmentation_file, max_len=None, seed=1234, transform=None):
+    def __init__(self, volume_file, segmentation_file, max_len=None, seed=1234, transform=None, only_fluid=True):
         self.slices = np.load(volume_file, allow_pickle=True)
         self.segmentation = np.load(segmentation_file, allow_pickle=True)
 
@@ -48,15 +48,33 @@ class SegmentationDataset(Dataset):
             self.segmentation = self.segmentation[shuffler][:max_len]
 
         # This is to have the same labels as in the OCTHDF5Dataset dataset.
-        self.segmentation = np.where(self.segmentation == 3, 0, self.segmentation)  # Remove PED
-        self.segmentation = np.where(self.segmentation == 2, 3, self.segmentation)  # AUX
-        self.segmentation = np.where(self.segmentation == 1, 2, self.segmentation)  # IRF to index 2
-        self.segmentation = np.where(self.segmentation == 3, 1, self.segmentation)  # SRF to index 1
+        # self.segmentation = np.where(self.segmentation == 3, 0, self.segmentation)  # Remove PED
+        # self.segmentation = np.where(self.segmentation == 2, 3, self.segmentation)  # AUX
+        # self.segmentation = np.where(self.segmentation == 1, 2, self.segmentation)  # IRF to index 2
+        # self.segmentation = np.where(self.segmentation == 3, 1, self.segmentation)  # SRF to index 1
 
-        self.dataset_len = len(self.slices)
+        self.n_classes = 4
+
+        if only_fluid:
+            idx_keep = (self.segmentation != 0).any(axis=(2, 3)).astype(float).nonzero()[0]
+            self.slices = self.slices[idx_keep]
+            self.segmentation = self.segmentation[idx_keep]
+
+        self.weights = self._get_weights()
+        self.dataset_len = self.segmentation.shape[0]
 
     def __len__(self):
         return self.dataset_len
+
+    def _get_weights(self):
+        n_samples = []
+        for i in range(self.n_classes):
+            n_samples.append(np.sum(self.segmentation == i))
+
+        normed_weights = [1 - (x / np.sum(n_samples)) for x in n_samples]
+        normed_weights = torch.as_tensor(normed_weights, dtype=torch.float)
+
+        return normed_weights
 
     def __getitem__(self, idx):
         image = self.slices[idx][0] / 256
