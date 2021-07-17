@@ -70,18 +70,6 @@ def get_model(p):
         raise NotImplementedError(f'{p["model"]} not implemented')
 
 
-def freeze_backbones(model):
-    model.module.model_q.backbone.eval()
-    model.module.model_k.backbone.eval()
-
-    for param in model.module.model_q.backbone.parameters():
-        param.requires_grad = False
-    for param in model.module.model_k.backbone.parameters():
-        param.requires_grad = False
-
-    return model
-
-
 def remove_module_from_dict(state_dict):
     from collections import OrderedDict
     new_state_dict = OrderedDict()
