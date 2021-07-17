@@ -13,6 +13,7 @@ model_kwargs:
   use_classification_head: True
   classify_embedding: True
   pretraining: imagenet
+  freeze_backbone: True
 
 checkpoint: None
 

@@ -17,6 +17,8 @@ class ContrastiveModel(nn.Module):
         """
         super(ContrastiveModel, self).__init__()
 
+        self.num_classes = p['num_classes']
+
         self.K = p['moco_kwargs']['K']
         self.m = p['moco_kwargs']['m']
         self.T = p['moco_kwargs']['T']
@@ -26,6 +28,9 @@ class ContrastiveModel(nn.Module):
         # create the model 
         self.model_q = get_model(p)
         self.model_k = get_model(p)
+
+        if p['model_kwargs']['freeze_backbone']:
+            self.freeze_backbones()
 
         for param_q, param_k in zip(self.model_q.parameters(), self.model_k.parameters()):
             param_k.data.copy_(param_q.data)  # initialize
@@ -38,7 +43,7 @@ class ContrastiveModel(nn.Module):
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
-        self.kmeans = KMeans(n_clusters=p['num_classes'])
+        # self.kmeans = KMeans(n_clusters=p['num_classes'])
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
@@ -178,13 +183,23 @@ class ContrastiveModel(nn.Module):
 
     @torch.no_grad()
     def forward_validation(self, im):
+        kmeans = KMeans(n_clusters=self.num_classes)
         segmentation = self.model_q(im)['seg']
         b, c, h, w = segmentation.shape
         segmentation = rearrange(segmentation, 'b c h w -> (b h w) c')
 
-        segmentation = self.kmeans.fit_predict(segmentation.cpu().numpy())
+        segmentation = kmeans.fit_predict(segmentation.cpu().numpy())
         segmentation_class = rearrange(torch.from_numpy(segmentation), '(b h w) -> b h w', b=b, h=h, w=w)
         return segmentation_class
+
+    def freeze_backbones(self):
+        self.model_q.backbone.eval()
+        self.model_k.backbone.eval()
+
+        for param in self.model_q.backbone.parameters():
+            param.requires_grad = False
+        for param in self.model_k.backbone.parameters():
+            param.requires_grad = False
 
 
 # utils
@@ -203,5 +218,4 @@ def concat_all_gather(tensor):
 
 
 if __name__ == '__main__':
-
     model = ContrastiveModel()
