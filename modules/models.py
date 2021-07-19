@@ -5,11 +5,11 @@ from torch.nn import functional as F
 
 class ContrastiveSegmentationModel(nn.Module):
     def __init__(self, backbone, decoder, upsample, num_classes, ndim, classify_embedding=True, use_classification_head=True,
-                 upsample_embedding=False):
+                 upsample_embedding_mode=False):
         super(ContrastiveSegmentationModel, self).__init__()
         self.backbone = backbone  # This is the encoder
         self.upsample = upsample
-        self.upsample_embedding = upsample_embedding
+        self.upsample_embedding_mode = upsample_embedding_mode
         self.use_classification_head = use_classification_head
         self.classify_embedding = classify_embedding
 
@@ -41,16 +41,16 @@ class ContrastiveSegmentationModel(nn.Module):
         x = self.backbone(x)
         if self.classify_embedding:
             cl_embedding = self.forward_embeddings(x)
-            if self.upsample_embedding:
-                cl_embedding = F.interpolate(cl_embedding, size=input_shape, mode='bilinear', align_corners=False)
+            if self.upsample:
+                cl_embedding = F.interpolate(cl_embedding, size=input_shape, mode=self.upsample_embedding_mode,
+                                             align_corners=False)
             return_dict['cls_emb'] = cl_embedding
 
         embedding = self.decoder(x)  # ASPP + Conv 1x1
 
         # Upsample to input resolution
         if self.upsample:
-            x = F.interpolate(embedding, size=input_shape, mode='bilinear', align_corners=False)
-            return_dict['seg'] = x
+            return_dict['seg'] = F.interpolate(embedding, size=input_shape, mode='bilinear', align_corners=False)
         else:
             return_dict['seg'] = embedding
 

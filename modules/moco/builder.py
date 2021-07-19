@@ -155,7 +155,7 @@ class ContrastiveModel(nn.Module):
             #                                                                     # non-healthy points
             # features = features.mean(dim=0)  # Positive samples: pixels x dim.
 
-        # compute key prototypes
+        # compute key prototypes. Negatives
         with torch.no_grad():  # no gradient to keys
             kdict = self.model_k(im_k)  # keys: N x dim x H x W
             k = kdict['seg']

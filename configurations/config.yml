@@ -1,5 +1,5 @@
 num_classes: 3
-train_batch_size: 16
+train_batch_size: 32
 
 # Model
 model: deeplab
@@ -10,6 +10,7 @@ backbone_kwargs:
 model_kwargs:
   ndim: 32
   upsample: True
+  upsample_embedding_mode: nearest
   use_classification_head: True
   classify_embedding: True
   pretraining: imagenet
@@ -19,7 +20,7 @@ checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.5 # Temperature
+   T: 0.1 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
 
@@ -41,4 +42,4 @@ loss_kwargs:
 # Train:
 train_kwargs:
   writing_per_epoch: 10
-  saved_images_per_epoch: 16  # Multiple of the batch size is better :)
+  saved_images_per_epoch: 8

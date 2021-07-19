@@ -65,7 +65,7 @@ def get_model(p):
                                             p['model_kwargs']['ndim'],
                                             p['model_kwargs']['classify_embedding'],
                                             p['model_kwargs']['use_classification_head'],
-                                            upsample_embedding=p['model_kwargs']['upsample'])
+                                            upsample_embedding_mode=p['model_kwargs']['upsample_embedding_mode'])
     else:
         raise NotImplementedError(f'{p["model"]} not implemented')
 
