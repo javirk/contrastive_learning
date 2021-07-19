@@ -7,6 +7,7 @@ backbone: resnet50
 backbone_kwargs:
   dilated: True
   pretraining: resnet50_dilation.pth  # Filename of the pretraining weights (only backbone)
+  padding_mode: zeros
 model_kwargs:
   ndim: 32
   upsample: True

@@ -57,7 +57,8 @@ def load_checkpoint(config, model, optimizer, device='cpu'):
 def get_model(p):
     if p['model'] == 'deeplab':
         backbone = resnet.__dict__[p['backbone']](pretrained=True, add_head=False,
-                                                  replace_stride_with_dilation=[False, True, True])
+                                                  replace_stride_with_dilation=[False, True, True],
+                                                  padding_mode=p['backbone_kwargs']['padding_mode'])
 
         # TODO: That 2048 depends on the backbone!
         decoder = DeepLabHead(2048, p['model_kwargs']['ndim'])

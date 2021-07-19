@@ -1,6 +1,7 @@
 import torchvision
 import math
 
+
 def write_to_tb(writer, labels, scalars, iteration, phase='train'):
     for scalar, label in zip(scalars, labels):
         writer.add_scalar(f'{phase}/{label}', scalar, iteration)
