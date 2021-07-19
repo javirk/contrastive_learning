@@ -26,7 +26,7 @@
 ##SBATCH --ntasks-per-node=1
 
 # on gpu partition
-#SBATCH --gres=gpu:rtx3090:4
+#SBATCH --gres=gpu:rtx3090:2
 ##SBATCH --nodelist=gnode13
 
 # Set the current working directory.
