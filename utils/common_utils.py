@@ -34,7 +34,7 @@ def prepare_run(root_path, config_path):
 
 
 def get_train_transformations(s=1):
-    augmentation = [transforms.ColorJitter(0.8 * s, 0.8 * s, 0.8 * s, 0.2 * s),
+    augmentation = [#transforms.ColorJitter(0.8 * s, 0.8 * s, 0.8 * s, 0.2 * s),
                     transforms.RandomAffine(20, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=-1),
                     # -1 because they are normalized (-1,1)
                     transforms.RandomHorizontalFlip(),
