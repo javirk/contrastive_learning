@@ -102,20 +102,35 @@ def segmentation_to_onehot(seg, num_classes):
     return one_hot.bool()
 
 
-def sample_results(model, dataset, num_classes, writer, epoch_num, number_images, device):
-    kmeans = KMeans(n_clusters=num_classes)
+def sample_results(model, dataset, num_classes, number_images, device, writer=None, epoch_num=None, debug=False,
+                   seed=1234):
+    kmeans = KMeans(n_clusters=num_classes)  # kmeans always has num_classes
+    if debug:
+        num_classes = num_classes + 1
+        colors = ['red', 'blue', 'yellow', 'green']  # Everything that is red is considered background by the coarse
+        # locator. The rest is from the kmeans
+    else:
+        colors = ['blue', 'yellow', 'green']
     model.eval()
-    im_idx = np.random.randint(0, len(dataset), number_images)
+
+    rng = np.random.RandomState(seed)
+    im_idx = rng.randint(0, len(dataset), number_images)
     o = []
+    input_batch = []
     for i in im_idx:
-        input_batch = dataset[i]['images'].unsqueeze(0).to(device)
+        input_batch.append(dataset[i]['images'].unsqueeze(0).to(device))
 
-        pred_batch, kmeans = model.forward_validation(input_batch, kmeans)
-        input_batch = ((input_batch + 1) / 2 * 255.).type(torch.uint8)
-        pred_batch = segmentation_to_onehot(pred_batch, num_classes)
+    input_batch = torch.cat(input_batch, dim=0)
 
-        input_batch = input_batch.to(pred_batch.device)
+    pred_batch, kmeans = model.forward_validation(input_batch, kmeans, debug)
+    input_batch = ((input_batch + 1) / 2 * 255.).type(torch.uint8)
+    pred_batch = segmentation_to_onehot(pred_batch, num_classes)
 
-        o.append(torchvision.utils.draw_segmentation_masks(input_batch[0], pred_batch[0]))
+    for im, seg in zip(input_batch, pred_batch):
+        o.append(torchvision.utils.draw_segmentation_masks(im, seg, colors=colors, alpha=0.3))
 
-    write_image_tb(writer, o, epoch_num, 'Segmentation')
+    if writer is not None:
+        assert epoch_num is not None, 'If a writer is passed, epoch_num is mandatory'
+        write_image_tb(writer, o, epoch_num, 'Segmentation')
+    else:
+        return o, pred_batch, input_batch

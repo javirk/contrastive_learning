@@ -51,8 +51,8 @@ def main():
         model, i = train_epoch(model, dataloader, label_criterion, opt, metrics, writing_freq, writer, epoch, device)
 
         print('Sample results...')
-        sample_results(model, dataset, config['num_classes'], writer, epoch,
-                       config['train_kwargs']['saved_images_per_epoch'], device)
+        sample_results(model, dataset, config['num_classes'], config['train_kwargs']['saved_images_per_epoch'], device,
+                       writer=writer, epoch_num=epoch, debug=True)
 
         torch.save({'optimizer': opt.state_dict(), 'model': model.state_dict(), 'epoch': epoch + 1}, ckpt_path)
 

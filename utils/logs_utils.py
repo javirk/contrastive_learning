@@ -14,6 +14,9 @@ def update_metrics_dict(dict1, dict2):
 
 
 def write_image_tb(writer, data, iteration, name):
+    if type(data) != list:
+        if data.dim == 3:
+            data = data.unsqueeze(1)
     image = torchvision.utils.make_grid(data, nrow=int(math.sqrt(len(data))))
     image = (image - image.min()) / (image.max() - image.min())
     writer.add_image(name, image, iteration, dataformats='CHW')
