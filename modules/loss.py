@@ -17,7 +17,7 @@ class ContrastiveLearningLoss(nn.Module):
         """
         positive_similarity = rearrange(positive_similarity, 'p b -> b p')
 
-        den = torch.sum(torch.exp(negative_similarity), dim=-1)
+        den = torch.sum(torch.exp(negative_similarity), dim=-1) + torch.exp(positive_similarity)
 
         l = - positive_similarity + torch.log(den)
 
