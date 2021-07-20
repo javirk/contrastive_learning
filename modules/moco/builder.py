@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-from sklearn.cluster import KMeans
 
 from modules.loss import ContrastiveLearningLoss
 from utils.model_utils import get_model
@@ -129,8 +128,17 @@ class ContrastiveModel(nn.Module):
         qdict = self.model_q(im_q)
         class_prediction = qdict['cls']
         q = qdict['seg']  # queries: B x dim x H x W
-        q = nn.functional.normalize(q, dim=1)
-        q = rearrange(q, 'b dim h w -> b (h w) dim')  # queries: batch x pixels x dim
+        q = rearrange(q, 'b dim h w -> (b h w) dim')  # queries: pixels x dim
+
+        q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
+            # coarse embeddings
+        with torch.no_grad():
+            q_coarse = torch.softmax(q_coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
+            q_coarse = (q_coarse != 0).reshape(-1)  # True/False. Shape: pixels
+            q_coarse_idx = torch.nonzero(q_coarse).squeeze()
+
+        q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
+        q_prototypes = nn.functional.normalize(q_prototypes, dim=1)
 
         # compute positive prototypes
         with torch.no_grad():
@@ -141,19 +149,11 @@ class ContrastiveModel(nn.Module):
             # Should I normalize here? I think I shouldn't
             features = rearrange(features, 'b d h w -> b d (h w)')
             qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
-            # coarse embeddings
+                # coarse embeddings
             qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
             qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
-            features = torch.bmm(features, qt_pred)  # B x dim x 1
-            features = nn.functional.normalize(features, dim=1)  # B x dim x 1
-
-            # The following doesn't work because there could be an odd number of pixels
-            # mask_indexes = torch.nonzero(qt_pred).view(-1)  # This is a vector with N dimensions
-            #
-            # features = rearrange(features, 'b d h w -> (b h w) d')
-            # features = torch.index_select(features, index=mask_indexes, dim=0)  # N x dim, N is the number of
-            #                                                                     # non-healthy points
-            # features = features.mean(dim=0)  # Positive samples: pixels x dim.
+            features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
+            features = nn.functional.normalize(features, dim=1)  # B x dim
 
         # compute key prototypes. Negatives
         with torch.no_grad():  # no gradient to keys
@@ -162,12 +162,12 @@ class ContrastiveModel(nn.Module):
             k = nn.functional.normalize(k, dim=1)
             k = k.mean(dim=(2, 3))  # N x dim
 
-        positive_similarity = torch.bmm(q, features)  # shape: batch x pixels x 1
-        l_batch = torch.matmul(q, k.t())  # shape: batch x pixels x negatives in batch
+        positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
+        l_batch = torch.matmul(q_prototypes, k.t())  # shape: pixels x negatives in batch
         negatives = self.queue.clone().detach()  # shape: dim x negatives
-        l_mem = torch.matmul(q, negatives)  # shape: batch x pixels x negatives in memory
+        l_mem = torch.matmul(q_prototypes, negatives)  # shape: pixels x negatives in memory
         negative_similarity = torch.cat([l_batch, l_mem],
-                                        dim=-1)  # shape: batch x pixels x (negatives batch + negatives memory)
+                                        dim=-1)  # shape: pixels x (negatives batch + negatives memory)
 
         # apply temperature
         positive_similarity /= self.T
@@ -182,15 +182,27 @@ class ContrastiveModel(nn.Module):
         return cl_loss, class_prediction
 
     @torch.no_grad()
-    def forward_validation(self, im):
-        kmeans = KMeans(n_clusters=self.num_classes)
-        segmentation = self.model_q(im)['seg']
-        b, c, h, w = segmentation.shape
-        segmentation = rearrange(segmentation, 'b c h w -> (b h w) c')
+    def forward_validation(self, im, kmeans):
+        qdict = self.model_q(im)
+        features = qdict['seg']
+        coarse = qdict['cls_emb']
 
-        segmentation = kmeans.fit_predict(segmentation.cpu().numpy())
-        segmentation_class = rearrange(torch.from_numpy(segmentation), '(b h w) -> b h w', b=b, h=h, w=w)
-        return segmentation_class
+        b, c, h, w = features.shape
+        features = rearrange(features, 'b dim h w -> (b h w) dim')  # features: pixels x dim
+
+        coarse = torch.softmax(coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
+        coarse = (coarse != 0).reshape(-1)  # True/False. B.H.W (pixels)
+        coarse_idx = torch.nonzero(coarse).squeeze()
+
+        prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
+
+        prediction_kmeans = kmeans.fit_predict(prototypes.cpu().numpy())
+        segmentation = torch.zeros(coarse.shape, dtype=torch.int32)
+        segmentation[coarse_idx] = torch.tensor(prediction_kmeans)
+
+        segmentation = rearrange(segmentation, '(b h w) -> b h w', b=b, h=h, w=w)
+
+        return segmentation, kmeans
 
     def freeze_backbones(self):
         self.model_q.backbone.eval()

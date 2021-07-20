@@ -48,7 +48,7 @@ def main():
         print('Adjusted learning rate to {:.5f}'.format(lr))
 
         print('Train...')
-        model, i = train_epoch(model, dataloader, label_criterion, opt, metrics, writing_freq, writer, epoch, device)
+        # model, i = train_epoch(model, dataloader, label_criterion, opt, metrics, writing_freq, writer, epoch, device)
 
         print('Sample results...')
         sample_results(model, dataset, config['num_classes'], writer, epoch,

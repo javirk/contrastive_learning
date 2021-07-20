@@ -9,6 +9,7 @@ import torchvision.transforms as transforms
 import math
 import numpy as np
 from utils.logs_utils import write_image_tb
+from sklearn.cluster import KMeans
 
 
 def copy_file(src, dst):
@@ -102,13 +103,14 @@ def segmentation_to_onehot(seg, num_classes):
 
 
 def sample_results(model, dataset, num_classes, writer, epoch_num, number_images, device):
+    kmeans = KMeans(n_clusters=num_classes)
     model.eval()
     im_idx = np.random.randint(0, len(dataset), number_images)
     o = []
     for i in im_idx:
         input_batch = dataset[i]['images'].unsqueeze(0).to(device)
 
-        pred_batch = model.forward_validation(input_batch)
+        pred_batch, kmeans = model.forward_validation(input_batch, kmeans)
         input_batch = ((input_batch + 1) / 2 * 255.).type(torch.uint8)
         pred_batch = segmentation_to_onehot(pred_batch, num_classes)
 
