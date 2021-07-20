@@ -126,6 +126,9 @@ def sample_results(model, dataset, num_classes, number_images, device, writer=No
     input_batch = ((input_batch + 1) / 2 * 255.).type(torch.uint8)
     pred_batch = segmentation_to_onehot(pred_batch, num_classes)
 
+    pred_batch = pred_batch.cpu()
+    input_batch = input_batch.cpu()
+
     for im, seg in zip(input_batch, pred_batch):
         o.append(torchvision.utils.draw_segmentation_masks(im, seg, colors=colors, alpha=0.3))
 
