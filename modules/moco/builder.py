@@ -115,6 +115,7 @@ class ContrastiveModel(nn.Module):
 
         return x_gather[idx_this]
 
+    @torch.cuda.amp.autocast
     def forward(self, im_q, im_qt, im_k):
         """
 
