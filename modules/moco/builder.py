@@ -130,20 +130,18 @@ class ContrastiveModel(nn.Module):
             qdict = self.model_q(im_q)
             class_prediction = qdict['cls']
             q = qdict['seg']  # queries: B x dim x H x W
-            # print(f'q.isnan().any()={q.isnan().any()}')
             q = rearrange(q, 'b dim h w -> (b h w) dim')  # queries: pixels x dim
 
             q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
                 # coarse embeddings
-            # print(f'q_coarse.isnan().any()={q_coarse.isnan().any()}')
             with torch.no_grad():
                 q_coarse = torch.softmax(q_coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
                 q_coarse = (q_coarse != 0).reshape(-1)  # True/False. Shape: pixels
                 q_coarse_idx = torch.nonzero(q_coarse).squeeze()
 
             q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
-            q_prototypes = nn.functional.normalize(q_prototypes, dim=1)
-            # print(f'q_prototypes.isnan().any()={q_prototypes.isnan().any()}')
+            q_prototypes = nn.functional.normalize(q_prototypes.float(), dim=1)
+
             # compute positive prototypes
             with torch.no_grad():
                 self._momentum_update_key_encoder()  # update the key encoder
@@ -152,25 +150,19 @@ class ContrastiveModel(nn.Module):
                 features = qtdict['seg']  # queries transformed: B x dim x H x W
                 # Should I normalize here? I think I shouldn't
                 features = rearrange(features, 'b d h w -> b d (h w)')
-                # print(f'features.isnan().any()={features.isnan().any()}')
                 qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
                     # coarse embeddings
-                # print(f'QT_PRED BEFORE ={qt_pred.isnan().any()}')
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
-                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).type(torch.float16)  # True/False. B x H.W x 1
+                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1)  # True/False. B x H.W x 1
 
-                # print(f'FEATURES before bmm ={features.isnan().any()}')
-                # print(f'FEATURES dtype ={features.dtype}', f'qt_pred dtype ={qt_pred.dtype}')
                 features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
-                # print(f'FEATURES before normalization ={features.isnan().any()}')
-                features = nn.functional.normalize(features, dim=1, eps=1e-4)  # B x dim
-                # print(f'FEATURES before matmul ={features.isnan().any()}')
+                features = nn.functional.normalize(features.float(), dim=1)  # B x dim. Normalize has mixed-precision issues
 
             # compute key prototypes. Negatives
             with torch.no_grad():  # no gradient to keys
                 kdict = self.model_k(im_k)  # keys: N x dim x H x W
                 k = kdict['seg']
-                k = nn.functional.normalize(k, dim=1)
+                k = nn.functional.normalize(k.float(), dim=1)
                 k = k.mean(dim=(2, 3))  # N x dim
 
             positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
@@ -179,8 +171,6 @@ class ContrastiveModel(nn.Module):
             l_mem = torch.matmul(q_prototypes, negatives)  # shape: pixels x negatives in memory
             negative_similarity = torch.cat([l_batch, l_mem],
                                             dim=-1)  # shape: pixels x (negatives batch + negatives memory)
-            # print(f'positive_similarity.isnan().any()={positive_similarity.isnan().any()}')
-            # print(f'negative_similarity.isnan().any()={negative_similarity.isnan().any()}')
             # apply temperature
             positive_similarity /= self.T
             negative_similarity /= self.T
