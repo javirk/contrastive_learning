@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-import torch.cuda.amp.autocast as autocast
+from torch.cuda.amp import autocast
 
 from modules.loss import ContrastiveLearningLoss
 from utils.model_utils import get_model
