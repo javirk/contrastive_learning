@@ -1,5 +1,5 @@
 num_classes: 3
-train_batch_size: 32
+train_batch_size: 64
 
 # Model
 model: deeplab
@@ -34,7 +34,6 @@ optimizer_kwargs:
    momentum: 0.9
    nesterov: False
 scheduler: poly
-
 
 # Loss
 loss_kwargs:
