@@ -24,7 +24,7 @@ def normalize(input: torch.Tensor, p: float = 2.0, dim: int = 1, eps: float = 1e
     if nn.functional.has_torch_function_unary(input):
         return nn.functional.handle_torch_function(normalize, (input,), input, p=p, dim=dim, eps=eps, out=out)
     if out is None:
-        denom = input.norm(p, dim, keepdim=True).float().clamp_min(eps).expand_as(input)
+        denom = torch.clamp(input.norm(p, dim, keepdim=True).float(), min=eps).expand_as(input)
         return input / denom
     else:
         denom = input.norm(p, dim, keepdim=True).float().clamp_min_(eps).expand_as(input)
