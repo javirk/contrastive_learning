@@ -155,9 +155,10 @@ class ContrastiveModel(nn.Module):
                 print(f'features.isnan().any()={features.isnan().any()}')
                 qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
                     # coarse embeddings
-                print(f'qt_pred.isnan().any()={qt_pred.isnan().any()}')
+                print(f'QT_PRED BEFORE ={qt_pred.isnan().any()}')
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
                 qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
+                print(f'QT_PRED AFTER ={qt_pred.isnan().any()}')
                 features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
                 features = nn.functional.normalize(features, dim=1)  # B x dim
 
@@ -182,8 +183,8 @@ class ContrastiveModel(nn.Module):
 
         # Calculate loss
         cl_loss = self.cl_loss(positive_similarity, negative_similarity)
-        print(f'Loss={cl_loss}\n')
-        print(f'Class prediction dtype = {class_prediction.dtype}')
+        print(f'Loss={cl_loss}')
+        print(f'Class prediction dtype = {class_prediction.dtype}\n')
 
         # dequeue and enqueue
         self._dequeue_and_enqueue(k)
