@@ -17,6 +17,7 @@ class ContrastiveModel(nn.Module):
         super(ContrastiveModel, self).__init__()
 
         self.num_classes = p['num_classes']
+        self.use_amp = p['use_amp']
 
         self.K = p['moco_kwargs']['K']
         self.m = p['moco_kwargs']['m']
@@ -115,7 +116,6 @@ class ContrastiveModel(nn.Module):
 
         return x_gather[idx_this]
 
-    @torch.cuda.amp.autocast
     def forward(self, im_q, im_qt, im_k):
         """
 
@@ -124,61 +124,62 @@ class ContrastiveModel(nn.Module):
         :param im_k: Key images (only healthy) (B x 3 x H x W)
         :return:
         """
-        batch_size = im_q.size(0)
+        with torch.cuda.amp.autocast(enabled=self.use_amp):
+            batch_size = im_q.size(0)
 
-        qdict = self.model_q(im_q)
-        class_prediction = qdict['cls']
-        q = qdict['seg']  # queries: B x dim x H x W
-        q = rearrange(q, 'b dim h w -> (b h w) dim')  # queries: pixels x dim
+            qdict = self.model_q(im_q)
+            class_prediction = qdict['cls']
+            q = qdict['seg']  # queries: B x dim x H x W
+            q = rearrange(q, 'b dim h w -> (b h w) dim')  # queries: pixels x dim
 
-        q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
-            # coarse embeddings
-        with torch.no_grad():
-            q_coarse = torch.softmax(q_coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
-            q_coarse = (q_coarse != 0).reshape(-1)  # True/False. Shape: pixels
-            q_coarse_idx = torch.nonzero(q_coarse).squeeze()
-
-        q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
-        q_prototypes = nn.functional.normalize(q_prototypes, dim=1)
-
-        # compute positive prototypes
-        with torch.no_grad():
-            self._momentum_update_key_encoder()  # update the key encoder
-
-            qtdict = self.model_k(im_qt)
-            features = qtdict['seg']  # queries transformed: B x dim x H x W
-            # Should I normalize here? I think I shouldn't
-            features = rearrange(features, 'b d h w -> b d (h w)')
-            qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
+            q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
                 # coarse embeddings
-            qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
-            qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
-            features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
-            features = nn.functional.normalize(features, dim=1)  # B x dim
+            with torch.no_grad():
+                q_coarse = torch.softmax(q_coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
+                q_coarse = (q_coarse != 0).reshape(-1)  # True/False. Shape: pixels
+                q_coarse_idx = torch.nonzero(q_coarse).squeeze()
 
-        # compute key prototypes. Negatives
-        with torch.no_grad():  # no gradient to keys
-            kdict = self.model_k(im_k)  # keys: N x dim x H x W
-            k = kdict['seg']
-            k = nn.functional.normalize(k, dim=1)
-            k = k.mean(dim=(2, 3))  # N x dim
+            q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
+            q_prototypes = nn.functional.normalize(q_prototypes, dim=1)
 
-        positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
-        l_batch = torch.matmul(q_prototypes, k.t())  # shape: pixels x negatives in batch
-        negatives = self.queue.clone().detach()  # shape: dim x negatives
-        l_mem = torch.matmul(q_prototypes, negatives)  # shape: pixels x negatives in memory
-        negative_similarity = torch.cat([l_batch, l_mem],
-                                        dim=-1)  # shape: pixels x (negatives batch + negatives memory)
+            # compute positive prototypes
+            with torch.no_grad():
+                self._momentum_update_key_encoder()  # update the key encoder
 
-        # apply temperature
-        positive_similarity /= self.T
-        negative_similarity /= self.T
+                qtdict = self.model_k(im_qt)
+                features = qtdict['seg']  # queries transformed: B x dim x H x W
+                # Should I normalize here? I think I shouldn't
+                features = rearrange(features, 'b d h w -> b d (h w)')
+                qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
+                    # coarse embeddings
+                qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
+                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
+                features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
+                features = nn.functional.normalize(features, dim=1)  # B x dim
 
-        # Calculate loss
-        cl_loss = self.cl_loss(positive_similarity, negative_similarity)
+            # compute key prototypes. Negatives
+            with torch.no_grad():  # no gradient to keys
+                kdict = self.model_k(im_k)  # keys: N x dim x H x W
+                k = kdict['seg']
+                k = nn.functional.normalize(k, dim=1)
+                k = k.mean(dim=(2, 3))  # N x dim
 
-        # dequeue and enqueue
-        self._dequeue_and_enqueue(k)
+            positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
+            l_batch = torch.matmul(q_prototypes, k.t())  # shape: pixels x negatives in batch
+            negatives = self.queue.clone().detach()  # shape: dim x negatives
+            l_mem = torch.matmul(q_prototypes, negatives)  # shape: pixels x negatives in memory
+            negative_similarity = torch.cat([l_batch, l_mem],
+                                            dim=-1)  # shape: pixels x (negatives batch + negatives memory)
+
+            # apply temperature
+            positive_similarity /= self.T
+            negative_similarity /= self.T
+
+            # Calculate loss
+            cl_loss = self.cl_loss(positive_similarity, negative_similarity)
+
+            # dequeue and enqueue
+            self._dequeue_and_enqueue(k)
 
         return cl_loss, class_prediction
 
