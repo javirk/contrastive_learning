@@ -2,28 +2,31 @@ import torch
 from utils.logs_utils import write_to_tb, update_metrics_dict
 
 
-def train_step(data, model, criterion, optimizer, metrics, device):
+def train_step(config, data, model, criterion, optimizer, scaler):
     optimizer.zero_grad()
 
-    input_batch = data['images'].to(device)
-    transformed_batch = data['transformed_images'].to(device)
-    healthy_batch = data['healthy_images'].to(device)
-    labels = data['labels'].to(device)
+    input_batch = data['images'].to(config['device'])
+    transformed_batch = data['transformed_images'].to(config['device'])
+    healthy_batch = data['healthy_images'].to(config['device'])
+    labels = data['labels'].to(config['device'])
+    with torch.cuda.amp.autocast(enabled=config['use_amp']):
+        cl_loss, class_prediction = model(input_batch, transformed_batch, healthy_batch)
+        print(class_prediction.dtype)
+        class_loss = criterion(class_prediction, labels)
+        loss = cl_loss + class_loss
 
-    cl_loss, class_prediction = model(input_batch, transformed_batch, healthy_batch)
-
-    class_loss = criterion(class_prediction, labels)
-    loss = cl_loss + class_loss
-
-    loss.backward()
-    optimizer.step()
+    scaler.scale(loss).backward()
+    scaler.step(optimizer)
+    scaler.update()
+    # loss.backward()
+    # optimizer.step()
 
     ## Now compute the metrics and return
     y_pred = torch.sigmoid(class_prediction).detach().cpu().numpy().ravel()
     y_true = labels.detach().cpu().numpy().ravel()
 
     m = {}
-    for name, metric in metrics.items():
+    for name, metric in config['metrics'].items():
         if name == 'f1_score':
             # Use a classification threshold of 0.1
             m[f'{name}'] = metric(y_true > 0, y_pred > 0.1)
@@ -60,13 +63,14 @@ def validation_step(data, model, criterion, metrics, device):
     return m, loss.item()
 
 
-def train_epoch(model, loader, criterion, optimizer, metrics, writing_freq, writer, epoch_num, device):
+def train_epoch(config, model, loader, criterion, optimizer, scaler, writer, epoch_num):
+    writing_freq = config['writing_freq']
     model.train()
     running_loss = 0.
     running_clloss = 0.
-    running_metrics = {k: 0 for k in metrics.keys()}
+    running_metrics = {k: 0 for k in config['metrics'].keys()}
     for i, data in enumerate(loader):
-        outputs = train_step(data, model, criterion, optimizer, metrics, device)
+        outputs = train_step(config, data, model, criterion, optimizer, scaler)
         model, metrics_results, loss, cl_loss = outputs
 
         running_loss += loss
@@ -86,7 +90,7 @@ def train_epoch(model, loader, criterion, optimizer, metrics, writing_freq, writ
 
             running_loss = 0.
             running_clloss = 0.
-            running_metrics = {k: 0 for k in metrics.keys()}
+            running_metrics = {k: 0 for k in config['metrics'].keys()}
 
     return model, n_epoch
 
