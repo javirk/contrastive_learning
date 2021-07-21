@@ -157,7 +157,9 @@ class ContrastiveModel(nn.Module):
                 qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).type(features.dtype)  # True/False. B x H.W x 1
 
                 features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
+                print(f'Features before normalization: {features.isnan().any()}')
                 features = normalize(features.float(), dim=1)  # B x dim. Normalize has mixed-precision issues
+                print(f'Features after normalization: {features.isnan().any()}')
 
             # compute key prototypes. Negatives
             with torch.no_grad():  # no gradient to keys
