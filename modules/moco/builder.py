@@ -180,11 +180,13 @@ class ContrastiveModel(nn.Module):
             positive_similarity /= self.T
             negative_similarity /= self.T
 
-            # Calculate loss
-            cl_loss = self.cl_loss(positive_similarity, negative_similarity)
+        # Calculate loss
+        cl_loss = self.cl_loss(positive_similarity, negative_similarity)
+        print(f'Loss={cl_loss}\n')
+        print(f'Class prediction dtype = {class_prediction.dtype}')
 
-            # dequeue and enqueue
-            self._dequeue_and_enqueue(k)
+        # dequeue and enqueue
+        self._dequeue_and_enqueue(k)
 
         return cl_loss, class_prediction
 
