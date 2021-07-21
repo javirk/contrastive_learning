@@ -141,8 +141,7 @@ class ContrastiveModel(nn.Module):
                 q_coarse_idx = torch.nonzero(q_coarse).squeeze()
 
             q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
-            with autocast(enabled=False):
-                q_prototypes = nn.functional.normalize(q_prototypes.float(), dim=1)
+            q_prototypes = nn.functional.normalize(q_prototypes.float(), dim=1)
 
             # compute positive prototypes
             with torch.no_grad():
@@ -158,15 +157,15 @@ class ContrastiveModel(nn.Module):
                 qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).type(features.dtype)  # True/False. B x H.W x 1
 
                 features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
-                with autocast(enabled=False):
-                    features = nn.functional.normalize(features.float(), dim=1)  # B x dim. Normalize has mixed-precision issues
+                print(f'Features before normalization {features.isnan().any()}')
+                features = nn.functional.normalize(features.float(), dim=1)  # B x dim. Normalize has mixed-precision issues
+                print(f'Features after normalization {features.isnan().any()}')
 
             # compute key prototypes. Negatives
             with torch.no_grad():  # no gradient to keys
                 kdict = self.model_k(im_k)  # keys: N x dim x H x W
                 k = kdict['seg']
-                with autocast(enabled=False):
-                    k = nn.functional.normalize(k.float(), dim=1)
+                k = nn.functional.normalize(k.float(), dim=1)
                 k = k.mean(dim=(2, 3))  # N x dim
 
             positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
