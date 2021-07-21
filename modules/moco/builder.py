@@ -153,7 +153,7 @@ class ContrastiveModel(nn.Module):
                 qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
                     # coarse embeddings
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
-                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1)  # True/False. B x H.W x 1
+                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).type(torch.half)  # True/False. B x H.W x 1
 
                 features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
                 features = nn.functional.normalize(features.float(), dim=1)  # B x dim. Normalize has mixed-precision issues
