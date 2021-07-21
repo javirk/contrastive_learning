@@ -157,13 +157,13 @@ class ContrastiveModel(nn.Module):
                     # coarse embeddings
                 print(f'QT_PRED BEFORE ={qt_pred.isnan().any()}')
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
-                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
+                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).type(torch.HalfTensor)  # True/False. B x H.W x 1
 
                 print(f'FEATURES before bmm ={features.isnan().any()}')
                 print(f'FEATURES dtype ={features.dtype}', f'qt_pred dtype ={qt_pred.dtype}')
                 features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
                 print(f'FEATURES before normalization ={features.isnan().any()}')
-                features = nn.functional.normalize(features, dim=1)  # B x dim
+                features = nn.functional.normalize(features, dim=1, eps=1e-4)  # B x dim
                 print(f'FEATURES before matmul ={features.isnan().any()}')
 
             # compute key prototypes. Negatives
