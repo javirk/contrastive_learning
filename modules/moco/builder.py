@@ -124,7 +124,7 @@ class ContrastiveModel(nn.Module):
         :param im_k: Key images (only healthy) (B x 3 x H x W)
         :return:
         """
-        with torch.cuda.amp.autocast(enabled=self.use_amp):
+        with torch.cuda.amp.autocast(enabled=self.use_amp) and torch.autograd.detect_anomaly():
             batch_size = im_q.size(0)
 
             qdict = self.model_q(im_q)
