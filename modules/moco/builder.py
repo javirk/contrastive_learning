@@ -124,7 +124,7 @@ class ContrastiveModel(nn.Module):
         :param im_k: Key images (only healthy) (B x 3 x H x W)
         :return:
         """
-        with torch.cuda.amp.autocast(enabled=self.use_amp) and torch.autograd.detect_anomaly():
+        with torch.cuda.amp.autocast(enabled=self.use_amp):
             batch_size = im_q.size(0)
 
             qdict = self.model_q(im_q)
@@ -153,7 +153,7 @@ class ContrastiveModel(nn.Module):
                 qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
                     # coarse embeddings
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
-                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).type(torch.half)  # True/False. B x H.W x 1
+                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).type(qt_pred.dtype)  # True/False. B x H.W x 1
 
                 features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
                 features = nn.functional.normalize(features.float(), dim=1)  # B x dim. Normalize has mixed-precision issues
