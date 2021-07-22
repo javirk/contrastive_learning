@@ -155,7 +155,7 @@ class ContrastiveModel(nn.Module):
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
                 qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
 
-                features = torch.bmm(features, qt_pred).squeeze(-1) / torch.sum(qt_pred, dim=1)  # B x dim
+                features = torch.bmm(features.float(), qt_pred).squeeze(-1) / torch.sum(qt_pred, dim=1)  # B x dim
                 print(f'qt_pred sum max: {qt_pred.sum(1).max()}, min: {qt_pred.sum(1).min()}')
                 print(f'Min: {features.min()}, max: {features.max()}')
                 features = nn.functional.normalize(features.float(), dim=1)  # B x dim
