@@ -1,5 +1,5 @@
 num_classes: 3
-train_batch_size: 64
+train_batch_size: 2
 
 # Model
 model: deeplab
@@ -17,7 +17,7 @@ model_kwargs:
   pretraining: imagenet
   freeze_backbone: True
 
-checkpoint: None
+checkpoint: 20210720-100302.pth
 
 # MoCo
 moco_kwargs:

@@ -155,12 +155,10 @@ class ContrastiveModel(nn.Module):
                     # coarse embeddings
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
                 qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
-
-                sum_qtpred = torch.clamp(torch.sum(qt_pred, dim=1), min=1)
-
-                features = torch.bmm(features.float(), qt_pred).squeeze(-1) / sum_qtpred  # B x dim
-                # print(f'qt_pred sum max: {qt_pred.sum(1).max()}, min: {qt_pred.sum(1).min()}')
-                # print(f'Min: {features.min()}, max: {features.max()}')
+                print(f'BEFORE: (features) Min: {features.min()}, max: {features.max()}')
+                features = torch.bmm(features.float(), qt_pred).squeeze(-1) / torch.sum(qt_pred, dim=1)  # B x dim
+                print(f'qt_pred sum max: {qt_pred.sum(1).max()}, min: {qt_pred.sum(1).min()}')
+                print(f'Features Min: {features.min()}, max: {features.max()}\n')
                 features = nn.functional.normalize(features.float(), dim=1)  # It should be a float already, but... B x dim
                 assert not features.isnan().any()
 

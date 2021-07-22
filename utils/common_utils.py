@@ -56,6 +56,9 @@ def get_train_transformations(s=1):
 
     return transforms.Compose(augmentation)
 
+def get_val_transformations():
+    augmentation = []
+    return transforms.Compose(augmentation)
 
 def get_optimizer(p, parameters):
     if p['optimizer'] == 'sgd':

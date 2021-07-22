@@ -39,18 +39,19 @@ def load_pretrained_aspp(config, model, device='cpu'):
     return model
 
 
-def load_checkpoint(config, model, optimizer, scaler, device='cpu'):
+def load_checkpoint(config, model, optimizer, scaler, device='cpu', mode='train'):
+    epoch = 0
     if os.path.exists('ckpts/' + config['checkpoint']):
         filename = config['checkpoint']
         state_dict = torch.load('ckpts/' + filename, map_location=device)
         model.load_state_dict(state_dict['model'])
-        optimizer.load_state_dict(state_dict['optimizer'])
-        epoch = state_dict['epoch']
+        if mode == 'train':
+            optimizer.load_state_dict(state_dict['optimizer'])
+            epoch = state_dict['epoch']
+            if config['use_amp']:
+                scaler.load_state_dict(state_dict['scaler'])
         print(f'Loaded checkpoint {filename}')
-        if config['use_amp']:
-            scaler.load_state_dict(state_dict['scaler'])
     else:
-        epoch = 0
         print('No checkpoint loaded')
 
     return model, optimizer, scaler, epoch
