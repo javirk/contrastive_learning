@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-from utils.mp_utils import normalize
 
 from modules.loss import ContrastiveLearningLoss
 from utils.model_utils import get_model
@@ -141,7 +140,7 @@ class ContrastiveModel(nn.Module):
                 q_coarse_idx = torch.nonzero(q_coarse).squeeze()
 
             q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
-            q_prototypes = normalize(q_prototypes.float(), dim=1)
+            q_prototypes = nn.functional.normalize(q_prototypes.float(), dim=1)
 
             # compute positive prototypes
             with torch.no_grad():
@@ -156,7 +155,7 @@ class ContrastiveModel(nn.Module):
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
                 qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).type(features.dtype)  # True/False. B x H.W x 1
 
-                features = torch.bmm(features, qt_pred).squeeze(-1)  # B x dim
+                features = torch.bmm(features, qt_pred).squeeze(-1) / torch.sum(qt_pred, dim=1)  # B x dim
                 print(f'Features before normalization: {features.isnan().any()}')
                 print(f'Min: {features.min()}, max: {features.max()}')
                 features = nn.functional.normalize(features.float(), dim=1)  # B x dim. Normalize has mixed-precision issues
@@ -166,7 +165,7 @@ class ContrastiveModel(nn.Module):
             with torch.no_grad():  # no gradient to keys
                 kdict = self.model_k(im_k)  # keys: N x dim x H x W
                 k = kdict['seg']
-                k = normalize(k.float(), dim=1)
+                k = nn.functional.normalize(k.float(), dim=1)
                 k = k.mean(dim=(2, 3))  # N x dim
 
             positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
