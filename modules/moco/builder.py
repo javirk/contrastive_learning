@@ -162,6 +162,7 @@ class ContrastiveModel(nn.Module):
                 # print(f'qt_pred sum max: {qt_pred.sum(1).max()}, min: {qt_pred.sum(1).min()}')
                 # print(f'Min: {features.min()}, max: {features.max()}')
                 features = nn.functional.normalize(features.float(), dim=1)  # It should be a float already, but... B x dim
+                assert not features.isnan().any()
 
             # compute key prototypes. Negatives
             with torch.no_grad():  # no gradient to keys
