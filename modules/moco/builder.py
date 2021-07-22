@@ -140,7 +140,7 @@ class ContrastiveModel(nn.Module):
                 q_coarse_idx = torch.nonzero(q_coarse).squeeze()
 
             q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
-            q_prototypes = nn.functional.normalize(q_prototypes.float(), dim=1)
+            q_prototypes = nn.functional.normalize(q_prototypes, dim=1)
 
             # compute positive prototypes
             with torch.no_grad():
@@ -148,24 +148,25 @@ class ContrastiveModel(nn.Module):
 
                 qtdict = self.model_k(im_qt)
                 features = qtdict['seg']  # queries transformed: B x dim x H x W
-                # Should I normalize here? I think I shouldn't
                 features = rearrange(features, 'b d h w -> b d (h w)')
+                features = nn.functional.normalize(features, dim=1)  # B x dim
+
                 qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
                     # coarse embeddings
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
                 qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
 
                 features = torch.bmm(features.float(), qt_pred).squeeze(-1) / torch.sum(qt_pred, dim=1)  # B x dim
-                print(f'qt_pred sum max: {qt_pred.sum(1).max()}, min: {qt_pred.sum(1).min()}')
-                print(f'Min: {features.min()}, max: {features.max()}')
-                features = nn.functional.normalize(features.float(), dim=1)  # B x dim
-                print(f'Features after normalization: {features.isnan().any()}')
+                # print(f'qt_pred sum max: {qt_pred.sum(1).max()}, min: {qt_pred.sum(1).min()}')
+                # print(f'Min: {features.min()}, max: {features.max()}')
+                features = nn.functional.normalize(features, dim=1)  # B x dim
+                # print(f'Features after normalization: {features.isnan().any()}')
 
             # compute key prototypes. Negatives
             with torch.no_grad():  # no gradient to keys
                 kdict = self.model_k(im_k)  # keys: N x dim x H x W
                 k = kdict['seg']
-                k = nn.functional.normalize(k.float(), dim=1)
+                k = nn.functional.normalize(k, dim=1)
                 k = k.mean(dim=(2, 3))  # N x dim
 
             positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
@@ -180,8 +181,8 @@ class ContrastiveModel(nn.Module):
 
         # Calculate loss
         cl_loss = self.cl_loss(positive_similarity, negative_similarity)
-        print(f'Loss={cl_loss}')
-        print(f'Class prediction dtype = {class_prediction.dtype}\n')
+        # print(f'Loss={cl_loss}')
+        # print(f'Class prediction dtype = {class_prediction.dtype}\n')
 
         # dequeue and enqueue
         self._dequeue_and_enqueue(k)
