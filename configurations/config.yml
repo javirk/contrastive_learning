@@ -1,5 +1,5 @@
 num_classes: 3
-train_batch_size: 2
+train_batch_size: 64
 
 # Model
 model: deeplab
