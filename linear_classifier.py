@@ -28,8 +28,8 @@ def main():
     model_date = config['checkpoint'].split('.')[0].split('-')[1]
     output_folder = model_date[-6:]
 
-    os.makedirs(Path(__file__).resolve().parents[1].joinpath(f'results'), exist_ok=True)
-    os.makedirs(Path(__file__).resolve().parents[1].joinpath(f'results/{output_folder}'), exist_ok=True)
+    os.makedirs(Path(__file__).resolve().parents[0].joinpath(f'results'), exist_ok=True)
+    os.makedirs(Path(__file__).resolve().parents[0].joinpath(f'results/{output_folder}'), exist_ok=True)
     u.copy_file(FLAGS.config, f'results/{output_folder}/config.yml')
 
     config['embedding_dir'] = f'results/{output_folder}'
