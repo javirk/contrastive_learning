@@ -66,8 +66,6 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
 
     all_embeddings = torch.zeros((len(val_loader.sampler), 496, 512)).to(device)
     for i, batch in enumerate(val_loader):
-        if i == 1:
-            break
         qdict = model.module.model_q(batch['images'].to(device))
         features = qdict['seg']
         coarse = qdict['cls_emb']
