@@ -99,7 +99,10 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
         pca = PCA(n_components=32, whiten=True)
         kmeans = MiniBatchKMeans(n_clusters=n_clusters, batch_size=1000, random_state=seed)
 
-        prototypes_pca = pca.fit_transform(prototypes.numpy())
+        if p['val_kwargs']['use_pca']:
+            prototypes_pca = pca.fit_transform(prototypes.numpy())
+        else:
+            prototypes_pca = prototypes.numpy()
         embeddings_kmeans = kmeans.fit_predict(prototypes_pca)
 
         background_cluster = 0  # This has no effect if coarse_pixels_only is False
