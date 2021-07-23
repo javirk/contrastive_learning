@@ -107,4 +107,4 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
             print('Computing prototype {}'.format(ptr))
 
     print('Saving results')
-    np.save(os.path.join(p['embedding_dir'], 'embeddings.npy'), all_embeddings)
+    np.save(os.path.join(p['embedding_dir'], 'embeddings.npy'), all_embeddings.cpu().numpy())
