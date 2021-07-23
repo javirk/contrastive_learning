@@ -87,6 +87,7 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
         prototypes = nn.functional.normalize(prototypes, dim=1)
 
         n_clusters = (cls > 0.5).sum() + 1  # Detected biomarkers + background
+        prototypes = prototypes.cpu().numpy()
 
         # In the original code they applied PCA before kmeans
         pca = PCA(n_components=32, whiten=True)
