@@ -51,7 +51,7 @@ def main():
     config['metrics'] = {}
     print(f'Defined metrics {config["metrics"]}')
 
-    config['writing_freq'] = max(1, len(dataset) // (config['train_kwargs']['writing_per_epoch'] * config['train_batch_size']))
+    config['writing_freq'] = max(1, len(dataset) // (config['train_kwargs']['writing_per_epoch'] * config['train_kwargs']['batch_size']))
 
     for epoch in range(start_epoch, config['epochs']):
         lr = adjust_learning_rate(config, opt, epoch)
