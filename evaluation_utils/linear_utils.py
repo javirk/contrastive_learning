@@ -42,7 +42,7 @@ def save_linear_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'
             coarse = (coarse != 0).reshape(-1)  # True/False. B.H.W (pixels)
             coarse_idx = torch.nonzero(coarse).squeeze()
         else:
-            coarse_idx = torch.tensor(range(features.shape[0]))
+            coarse_idx = torch.tensor(range(features.shape[0]), device=features.device)
 
         prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
 
