@@ -1,8 +1,10 @@
 import torch
 from utils.logs_utils import write_to_tb, update_metrics_dict
+from modules.loss import ContrastiveLearningLoss
 
 
 def train_step(config, data, model, criterion, optimizer, scaler):
+    cl_crit = ContrastiveLearningLoss() # TODO: Move this to a better place
     optimizer.zero_grad()
 
     input_batch = data['images'].to(config['device'])
@@ -10,9 +12,12 @@ def train_step(config, data, model, criterion, optimizer, scaler):
     healthy_batch = data['healthy_images'].to(config['device'])
     labels = data['labels'].to(config['device'])
     with torch.cuda.amp.autocast(enabled=config['use_amp']):
-        cl_loss, class_prediction = model(input_batch, transformed_batch, healthy_batch)
-        if config['loss_kwargs']['reduction'] == 'mean':
-            cl_loss = cl_loss.mean()
+        # cl_loss, class_prediction = model(input_batch, transformed_batch, healthy_batch)
+        # if config['loss_kwargs']['reduction'] == 'mean':
+        #     cl_loss = cl_loss.mean()
+        neg, pos, class_prediction = model(input_batch, transformed_batch, healthy_batch)
+        cl_loss = cl_crit(pos, neg).mean()
+
         class_loss = criterion(class_prediction, labels)
         loss = cl_loss + class_loss
 

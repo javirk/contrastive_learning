@@ -7,6 +7,7 @@ class ContrastiveLearningLoss(nn.Module):
     def __init__(self):
         super(ContrastiveLearningLoss, self).__init__()
 
+
     def forward(self, positive_similarity, negative_similarity):
         """
         Computes the CL loss

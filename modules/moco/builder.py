@@ -187,7 +187,9 @@ class ContrastiveModel(nn.Module):
         # dequeue and enqueue
         self._dequeue_and_enqueue(k)
 
-        return cl_loss, class_prediction
+        # return cl_loss, class_prediction
+
+        return negative_similarity, positive_similarity, class_prediction
 
     @torch.no_grad()
     def forward_validation(self, im, kmeans, debug=False):
