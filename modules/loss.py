@@ -4,9 +4,8 @@ from einops import rearrange
 
 class ContrastiveLearningLoss(nn.Module):
 
-    def __init__(self, reduction='mean'):
+    def __init__(self):
         super(ContrastiveLearningLoss, self).__init__()
-        self.reduction = reduction
 
     def forward(self, positive_similarity, negative_similarity):
         """
@@ -21,7 +20,4 @@ class ContrastiveLearningLoss(nn.Module):
 
         l = - positive_similarity + torch.log(den)
 
-        if self.reduction == 'mean':
-            return torch.mean(l)
-        else:
-            return l
+        return l

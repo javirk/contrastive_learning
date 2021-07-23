@@ -23,7 +23,7 @@ class ContrastiveModel(nn.Module):
         self.m = p['moco_kwargs']['m']
         self.T = p['moco_kwargs']['T']
 
-        self.cl_loss = ContrastiveLearningLoss(reduction=p['loss_kwargs']['reduction'])
+        self.cl_loss = ContrastiveLearningLoss()
 
         # create the model 
         self.model_q = get_model(p)

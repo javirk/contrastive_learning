@@ -11,6 +11,8 @@ def train_step(config, data, model, criterion, optimizer, scaler):
     labels = data['labels'].to(config['device'])
     with torch.cuda.amp.autocast(enabled=config['use_amp']):
         cl_loss, class_prediction = model(input_batch, transformed_batch, healthy_batch)
+        if config['loss_kwargs']['reduction'] == 'mean':
+            cl_loss = cl_loss.mean()
         class_loss = criterion(class_prediction, labels)
         loss = cl_loss + class_loss
 
