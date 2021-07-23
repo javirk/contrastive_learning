@@ -12,6 +12,7 @@ from utils.common_utils import get_train_transformations, get_optimizer, adjust_
 from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp
 from utils.train_utils import train_epoch
 from utils.kmeans_utils import sample_results
+from modules.loss import ContrastiveLearningLoss
 
 
 def main():
@@ -39,6 +40,8 @@ def main():
     scaler = torch.cuda.amp.GradScaler(enabled=config['use_amp'])
 
     label_criterion = nn.BCEWithLogitsLoss()
+    cl_criterion = ContrastiveLearningLoss(reduction='mean')
+    criterion = {'label': label_criterion, 'CL': cl_criterion}
 
     model = load_pretrained_backbone(config, model, device=device)
     model = load_pretrained_aspp(config, model, device=device)
@@ -55,7 +58,7 @@ def main():
         print('Adjusted learning rate to {:.5f}'.format(lr))
 
         print('Train...')
-        model, _ = train_epoch(config, model, dataloader, label_criterion, opt, scaler, writer, epoch)
+        model, _ = train_epoch(config, model, dataloader, criterion, opt, scaler, writer, epoch)
 
         print('Sample results...')
         sample_results(model, dataset, config['num_classes'], config['train_kwargs']['saved_images_per_epoch'], device,

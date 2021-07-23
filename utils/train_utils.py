@@ -3,8 +3,7 @@ from utils.logs_utils import write_to_tb, update_metrics_dict
 from modules.loss import ContrastiveLearningLoss
 
 
-def train_step(config, data, model, criterion, optimizer, scaler):
-    cl_crit = ContrastiveLearningLoss() # TODO: Move this to a better place
+def train_step(config, data, model, criterion_dict, optimizer, scaler):
     optimizer.zero_grad()
 
     input_batch = data['images'].to(config['device'])
@@ -12,13 +11,10 @@ def train_step(config, data, model, criterion, optimizer, scaler):
     healthy_batch = data['healthy_images'].to(config['device'])
     labels = data['labels'].to(config['device'])
     with torch.cuda.amp.autocast(enabled=config['use_amp']):
-        # cl_loss, class_prediction = model(input_batch, transformed_batch, healthy_batch)
-        # if config['loss_kwargs']['reduction'] == 'mean':
-        #     cl_loss = cl_loss.mean()
         neg, pos, class_prediction = model(input_batch, transformed_batch, healthy_batch)
-        cl_loss = cl_crit(pos, neg).mean()
+        cl_loss = criterion_dict['CL'](pos, neg)
 
-        class_loss = criterion(class_prediction, labels)
+        class_loss = criterion_dict['label'](class_prediction, labels)
         loss = cl_loss + class_loss
 
     scaler.scale(loss).backward()
@@ -69,14 +65,14 @@ def validation_step(data, model, criterion, metrics, device):
     return m, loss.item()
 
 
-def train_epoch(config, model, loader, criterion, optimizer, scaler, writer, epoch_num):
+def train_epoch(config, model, loader, criterion_dict, optimizer, scaler, writer, epoch_num):
     writing_freq = config['writing_freq']
     model.train()
     running_loss = 0.
     running_clloss = 0.
     running_metrics = {k: 0 for k in config['metrics'].keys()}
     for i, data in enumerate(loader):
-        outputs = train_step(config, data, model, criterion, optimizer, scaler)
+        outputs = train_step(config, data, model, criterion_dict, optimizer, scaler)
         model, metrics_results, loss, cl_loss = outputs
 
         running_loss += loss
