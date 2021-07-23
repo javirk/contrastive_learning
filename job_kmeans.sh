@@ -31,11 +31,11 @@
 
 # Set the current working directory.
 # All relative paths used in the job script are relative to this directory
-#SBATCH --workdir=./
+##SBATCH --workdir=./
 
 # For array jobs
 # Array job containing 100 tasks, run max 10 tasks at the same  time
 ##SBATCH --array=1-100%10
 
 # Main Python code below this line
-python ./kmeans.py -c runs/TL_20210723-102125/config.yml
+python ./kmeans.py -c runs/TL_20210723-114848/config.yml
