@@ -52,7 +52,7 @@ def save_linear_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'
             prototypes = (prototypes - mean) / var
 
         embeddings_linear = linear_classifier(prototypes)
-        embeddings_linear = embeddings_linear.softmax(dim=1).argmax(dim=1).int()
+        embeddings_linear = embeddings_linear.softmax(dim=1).argmax(dim=1).int().cpu()
 
         embeddings = torch.zeros((b * h * w), dtype=torch.int32)
         embeddings[coarse_idx] = embeddings_linear + 1
