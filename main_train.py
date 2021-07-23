@@ -28,6 +28,8 @@ def main():
                             num_workers=num_workers, drop_last=True)
 
     model = ContrastiveModel(config)
+    print(f"Lets use {torch.cuda.device_count()} GPUs!")
+    model = nn.DataParallel(model)
     model.to(device)
     model.train()
 
