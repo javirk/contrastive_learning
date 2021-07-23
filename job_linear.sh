@@ -38,4 +38,4 @@
 ##SBATCH --array=1-100%10
 
 # Main Python code below this line
-python ./evaluation/linear_classifier.py -c runs/TL_20210723-114848/config.yml
+python ./linear_classifier.py -c runs/TL_20210723-114848/config.yml

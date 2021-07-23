@@ -11,7 +11,7 @@ from data.data_retriever import ContrastiveDataset
 from utils.common_utils import get_train_transformations, get_optimizer, adjust_learning_rate, str2bool
 from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp
 from utils.train_utils import train_epoch
-from utils.kmeans_utils import sample_results
+from evaluation_utils.kmeans_utils import sample_results
 from modules.loss import ContrastiveLearningLoss
 
 

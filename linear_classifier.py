@@ -11,11 +11,10 @@ from modules.moco.builder import ContrastiveModel
 from data.data_retriever import ContrastiveDataset
 import utils.common_utils as u
 from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp
-from utils.kmeans_utils import save_embeddings_to_disk
+from evaluation_utils.linear_utils import save_linear_embeddings_to_disk
 
 
 def main():
-    assert config['val_kwargs']['batch_size'] == 1, 'Batch size must be 1 for validation'
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = ContrastiveModel(config)
     model = nn.DataParallel(model)
@@ -39,9 +38,10 @@ def main():
     augment_t = u.get_val_transformations()
     dataset = ContrastiveDataset(data_path.joinpath('oct_test_all.hdf5'), common_transform=common_t,
                                  augment_transform=augment_t, n_classes=config['num_classes'])
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=num_workers)
+    dataloader = DataLoader(dataset, batch_size=config['val_kwargs']['batch_size'], shuffle=False,
+                            num_workers=num_workers)
 
-    save_embeddings_to_disk(config, dataloader, model, device=device)
+    save_linear_embeddings_to_disk(config, dataloader, model, device=device)
 
 
 
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     config = read_config(FLAGS.config)
 
     if FLAGS.ubelix == 0:
-        data_path = Path(__file__).parents[3].joinpath('Datasets')
+        data_path = Path(__file__).parents[2].joinpath('Datasets')
         num_workers = 0
     else:
         data_path = Path('/storage/homefs/jg20n729/OCT_Detection/Datasets')
