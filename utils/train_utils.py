@@ -15,13 +15,11 @@ def train_step(config, data, model, criterion_dict, optimizer, scaler):
         cl_loss = criterion_dict['CL'](pos, neg)
 
         class_loss = criterion_dict['label'](class_prediction, labels)
-        loss = cl_loss + class_loss
+        loss = config['train_kwargs']['lambda_cl'] * cl_loss + class_loss
 
     scaler.scale(loss).backward()
     scaler.step(optimizer)
     scaler.update()
-    # loss.backward()
-    # optimizer.step()
 
     ## Now compute the metrics and return
     y_pred = torch.sigmoid(class_prediction).detach().cpu().numpy().ravel()

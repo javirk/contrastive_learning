@@ -60,21 +60,25 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
     :return:
     """
     import torch.nn as nn
-    print('Save embeddings to disk ...')
+    print('Save kmeans embeddings to disk ...')
     model.eval()
     ptr = 0
+    if p['val_kwargs']['coarse_pixels_only']:
+        filename = os.path.join(p['embedding_dir'], 'embeddings_kmeans_coarseonly.npy')
+    else:
+        filename = os.path.join(p['embedding_dir'], 'embeddings_kmeans.npy')
 
     all_embeddings = torch.zeros((len(val_loader.sampler), 496, 512)).to(device)
     for i, batch in enumerate(val_loader):
         qdict = model.module.model_q(batch['images'].to(device))
         features = qdict['seg']
-        coarse = qdict['cls_emb']
         cls = qdict['cls'].sigmoid().cpu()
 
         b, c, h, w = features.shape
         features = rearrange(features, 'b dim h w -> (b h w) dim')  # features: pixels x dim
 
         if p['val_kwargs']['coarse_pixels_only']:
+            coarse = qdict['cls_emb']
             coarse = torch.softmax(coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
             coarse = (coarse != 0).reshape(-1)  # True/False. B.H.W (pixels)
             coarse_idx = torch.nonzero(coarse).squeeze()
@@ -105,4 +109,4 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
             print('Computing prototype {}'.format(ptr))
 
     print('Saving results')
-    np.save(os.path.join(p['embedding_dir'], 'embeddings.npy'), all_embeddings.cpu().numpy())
+    np.save(filename, all_embeddings.cpu().numpy())
