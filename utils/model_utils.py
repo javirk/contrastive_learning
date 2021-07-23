@@ -19,8 +19,8 @@ def load_pretrained_backbone(config, model, device='cpu'):
         state_dict = torch.load(pretrained_path, map_location=device)
         state_dict = remove_module_from_dict(state_dict)
 
-        model.model_q.backbone.load_state_dict(state_dict, strict=True)
-        model.model_k.backbone.load_state_dict(state_dict, strict=True)
+        model.module.model_q.backbone.load_state_dict(state_dict, strict=True)
+        model.module.model_k.backbone.load_state_dict(state_dict, strict=True)
         # model.load_state_dict(state_dict, strict=True)
         print(f'Backbone loaded from {pretrained_path}')
     else:
@@ -33,8 +33,8 @@ def load_pretrained_aspp(config, model, device='cpu'):
     if config['model_kwargs']['pretraining'] == 'imagenet':
         print('Imagenet weights will be loaded for the head')
         state_dict_head = torch.load('pretrain/aspp_imagenet.pth', map_location=device)
-        model.model_q.decoder.load_state_dict(state_dict_head, strict=False)  # strict=False because of last layer classes
-        model.model_k.decoder.load_state_dict(state_dict_head, strict=False)
+        model.module.model_q.decoder.load_state_dict(state_dict_head, strict=False)  # strict=False because of last layer classes
+        model.module.model_k.decoder.load_state_dict(state_dict_head, strict=False)
 
     return model
 
