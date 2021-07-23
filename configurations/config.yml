@@ -28,7 +28,7 @@ moco_kwargs:
 epochs: 60
 optimizer: sgd
 optimizer_kwargs:
-   lr: 0.005
+   lr: 0.004
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False

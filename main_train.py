@@ -100,6 +100,9 @@ if __name__ == '__main__':
         num_workers = 8
 
     root_path = Path(__file__).resolve().parents[0]
+    if FLAGS.mixed_precision:
+        import warnings
+        warnings.warn('Mixed precision has stability issues for now')
     config['use_amp'] = FLAGS.mixed_precision
 
     main()

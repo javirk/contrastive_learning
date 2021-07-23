@@ -18,6 +18,7 @@ def main():
     assert config['val_kwargs']['batch_size'] == 1, 'Batch size must be 1 for validation'
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = ContrastiveModel(config)
+    model = nn.DataParallel(model)
     model.to(device)
     model.eval()
 
@@ -34,8 +35,7 @@ def main():
 
     config['embedding_dir'] = f'results/{output_folder}'
 
-    common_t = transforms.Compose([transforms.ToTensor(), transforms.RandomHorizontalFlip(),
-                                     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
+    common_t = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     augment_t = u.get_val_transformations()
     dataset = ContrastiveDataset(data_path.joinpath('oct_test_all.hdf5'), common_transform=common_t,
                                  augment_transform=augment_t, n_classes=config['num_classes'])
@@ -71,5 +71,9 @@ if __name__ == '__main__':
 
     root_path = Path(__file__).resolve().parents[0]
     config['use_amp'] = False
+
+    if 'TL_' in FLAGS.config and config['checkpoint'] is None:
+        # This only composes the checkpoint filename
+        config['checkpoint'] = FLAGS.config.split('/')[-2][3:] + '.pth'
 
     main()

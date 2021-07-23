@@ -51,7 +51,7 @@ def sample_results(model, dataset, num_classes, number_images, device, writer=No
 @torch.no_grad()
 def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
     """
-    From https://github.com/wvangansbeke/Unsupervised-Semantic-Segmentation
+    Inspired from https://github.com/wvangansbeke/Unsupervised-Semantic-Segmentation
     :param p:
     :param val_loader:
     :param model:
@@ -66,7 +66,9 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
 
     all_embeddings = torch.zeros((len(val_loader.sampler), 496, 512)).to(device)
     for i, batch in enumerate(val_loader):
-        qdict = model.model_q(batch['images'].to(device))
+        if i == 1:
+            break
+        qdict = model.module.model_q(batch['images'].to(device))
         features = qdict['seg']
         coarse = qdict['cls_emb']
         cls = qdict['cls'].sigmoid()
@@ -79,7 +81,6 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
             coarse = (coarse != 0).reshape(-1)  # True/False. B.H.W (pixels)
             coarse_idx = torch.nonzero(coarse).squeeze()
         else:
-            coarse = rearrange(coarse, 'b c h w -> (b c h w)')
             coarse_idx = torch.tensor(range(features.shape[0]))
 
         prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
@@ -105,4 +106,4 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
             print('Computing prototype {}'.format(ptr))
 
     print('Saving results')
-    np.save(os.path.join(p['embedding_dir'], 'embeddings.npy'))
+    np.save(os.path.join(p['embedding_dir'], 'embeddings.npy'), all_embeddings)
