@@ -23,8 +23,6 @@ class ContrastiveModel(nn.Module):
         self.m = p['moco_kwargs']['m']
         self.T = p['moco_kwargs']['T']
 
-        self.cl_loss = ContrastiveLearningLoss()
-
         # create the model 
         self.model_q = get_model(p)
         self.model_k = get_model(p)
@@ -42,8 +40,6 @@ class ContrastiveModel(nn.Module):
         self.queue = nn.functional.normalize(self.queue, dim=0)
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
-
-        # self.kmeans = KMeans(n_clusters=p['num_classes'])
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):
@@ -133,7 +129,7 @@ class ContrastiveModel(nn.Module):
             q = rearrange(q, 'b dim h w -> (b h w) dim')  # queries: pixels x dim
 
             q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
-                # coarse embeddings
+            # coarse embeddings
             with torch.no_grad():
                 q_coarse = torch.softmax(q_coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
                 q_coarse = (q_coarse != 0).reshape(-1)  # True/False. Shape: pixels
@@ -151,15 +147,17 @@ class ContrastiveModel(nn.Module):
                 features = rearrange(features, 'b d h w -> b d (h w)')
                 features = nn.functional.normalize(features.float(), dim=1)  # B x dim
 
-                qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
-                    # coarse embeddings
+                qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes
+                # from coarse embeddings
+
                 qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
                 qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
-                print(f'BEFORE: (features) Min: {features.min()}, max: {features.max()}')
-                features = torch.bmm(features.float(), qt_pred).squeeze(-1) / torch.sum(qt_pred, dim=1)  # B x dim
-                print(f'qt_pred sum max: {qt_pred.sum(1).max()}, min: {qt_pred.sum(1).min()}')
-                print(f'Features Min: {features.min()}, max: {features.max()}\n')
-                features = nn.functional.normalize(features.float(), dim=1)  # It should be a float already, but... B x dim
+
+                qt_sum = torch.clamp(torch.sum(qt_pred, dim=1), min=1)
+
+                features = torch.bmm(features.float(), qt_pred).squeeze(-1) / qt_sum  # B x dim
+                features = nn.functional.normalize(features.float(),
+                                                   dim=1)  # It should be a float already, but... B x dim
                 assert not features.isnan().any()
 
             # compute key prototypes. Negatives
@@ -179,15 +177,8 @@ class ContrastiveModel(nn.Module):
             positive_similarity /= self.T
             negative_similarity /= self.T
 
-        # Calculate loss
-        cl_loss = self.cl_loss(positive_similarity, negative_similarity)
-        # print(f'Loss={cl_loss}')
-        # print(f'Class prediction dtype = {class_prediction.dtype}\n')
-
         # dequeue and enqueue
         self._dequeue_and_enqueue(k)
-
-        # return cl_loss, class_prediction
 
         return negative_similarity, positive_similarity, class_prediction
 
@@ -239,7 +230,3 @@ def concat_all_gather(tensor):
 
     output = torch.cat(tensors_gather, dim=0)
     return output
-
-
-if __name__ == '__main__':
-    model = ContrastiveModel()

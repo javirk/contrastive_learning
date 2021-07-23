@@ -29,8 +29,8 @@ def main():
     model_date = config['checkpoint'].split('.')[0].split('-')[0]
     output_folder = model_date[-6:]
 
-    os.makedirs(Path(__file__).resolve().parents[0].joinpath(f'results'), exist_ok=True)
-    os.makedirs(Path(__file__).resolve().parents[0].joinpath(f'results/{output_folder}'), exist_ok=True)
+    os.makedirs(Path(__file__).resolve().parents[1].joinpath(f'results'), exist_ok=True)
+    os.makedirs(Path(__file__).resolve().parents[1].joinpath(f'results/{output_folder}'), exist_ok=True)
     u.copy_file(FLAGS.config, f'results/{output_folder}/config.yml')
 
     config['embedding_dir'] = f'results/{output_folder}'
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     config = read_config(FLAGS.config)
 
     if FLAGS.ubelix == 0:
-        data_path = Path(__file__).parents[2].joinpath('Datasets')
+        data_path = Path(__file__).parents[3].joinpath('Datasets')
         num_workers = 0
     else:
         data_path = Path('/storage/homefs/jg20n729/OCT_Detection/Datasets')

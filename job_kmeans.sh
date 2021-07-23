@@ -38,4 +38,4 @@
 ##SBATCH --array=1-100%10
 
 # Main Python code below this line
-python ./kmeans.py -c runs/TL_20210723-102125/config.yml
+python ./evaluation/kmeans.py -c runs/TL_20210723-102125/config.yml

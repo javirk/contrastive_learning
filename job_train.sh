@@ -38,4 +38,4 @@
 ##SBATCH --array=1-100%10
 
 # Main Python code below this line
-python ./main_train.py -c configurations/config.yml
+python ./main_train.py -c configurations/config.yml -mp False
