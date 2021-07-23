@@ -31,7 +31,7 @@ def sample_results(model, dataset, num_classes, number_images, device, writer=No
 
     input_batch = torch.cat(input_batch, dim=0)
 
-    pred_batch, kmeans = model.forward_validation(input_batch, kmeans, debug)
+    pred_batch, kmeans = model.module.forward_validation(input_batch, kmeans, debug)
     input_batch = ((input_batch + 1) / 2 * 255.).type(torch.uint8)
     pred_batch = segmentation_to_onehot(pred_batch, num_classes)
 
