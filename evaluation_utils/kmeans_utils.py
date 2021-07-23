@@ -85,7 +85,7 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
             background_idx = torch.nonzero(coarse == 0).squeeze()
             prototypes_background = torch.index_select(features, index=background_idx, dim=0)  # False pixels x dim
             prototypes_background = nn.functional.normalize(prototypes_background, dim=1)
-            mean_background_prototype = torch.mean(prototypes_background, dim=0)
+            mean_background_prototype = torch.mean(prototypes_background, dim=0).cpu()
         else:
             coarse_idx = torch.tensor(range(features.shape[0]), device=features.device)
 
