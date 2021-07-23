@@ -71,7 +71,7 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
         qdict = model.module.model_q(batch['images'].to(device))
         features = qdict['seg']
         coarse = qdict['cls_emb']
-        cls = qdict['cls'].sigmoid()
+        cls = qdict['cls'].sigmoid().cpu()
 
         b, c, h, w = features.shape
         features = rearrange(features, 'b dim h w -> (b h w) dim')  # features: pixels x dim

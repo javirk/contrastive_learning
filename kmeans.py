@@ -72,7 +72,7 @@ if __name__ == '__main__':
     root_path = Path(__file__).resolve().parents[0]
     config['use_amp'] = False
 
-    if 'TL_' in FLAGS.config and config['checkpoint'] is None:
+    if 'TL_' in FLAGS.config and config['checkpoint'] == 'None':
         # This only composes the checkpoint filename
         config['checkpoint'] = FLAGS.config.split('/')[-2][3:] + '.pth'
 
