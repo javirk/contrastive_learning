@@ -82,24 +82,41 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
             coarse = torch.softmax(coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
             coarse = (coarse != 0).reshape(-1)  # True/False. B.H.W (pixels)
             coarse_idx = torch.nonzero(coarse).squeeze()
+            background_idx = torch.nonzero(coarse == 0).squeeze()
+            prototypes_background = torch.index_select(features, index=background_idx, dim=0)  # False pixels x dim
+            prototypes_background = nn.functional.normalize(prototypes_background, dim=1)
+            mean_background_prototype = torch.mean(prototypes_background, dim=0)
         else:
-            coarse_idx = torch.tensor(range(features.shape[0]))
+            coarse_idx = torch.tensor(range(features.shape[0]), device=features.device)
 
         prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
         prototypes = nn.functional.normalize(prototypes, dim=1)
 
         n_clusters = (cls > 0.5).sum() + 1  # Detected biomarkers + background
-        prototypes = prototypes.cpu().numpy()
+        prototypes = prototypes.cpu()
 
         # In the original code they applied PCA before kmeans
         pca = PCA(n_components=32, whiten=True)
         kmeans = MiniBatchKMeans(n_clusters=n_clusters, batch_size=1000, random_state=seed)
 
-        prototypes = pca.fit_transform(prototypes)
-        embeddings_kmeans = kmeans.fit_predict(prototypes)
+        prototypes_pca = pca.fit_transform(prototypes.numpy())
+        embeddings_kmeans = kmeans.fit_predict(prototypes_pca)
+
+        background_cluster = 0  # This has no effect if coarse_pixels_only is False
+        if p['val_kwargs']['coarse_pixels_only']:
+            min_dist = 1e8
+            for cluster in range(n_clusters):
+                embedding_cluster_idx = (embeddings_kmeans == cluster).nonzero()[0]  # They are numpy arrays!
+                embedding_cluster = torch.index_select(prototypes, index=torch.tensor(embedding_cluster_idx), dim=0)
+                mean_embedding_cluster = torch.mean(embedding_cluster, dim=0)
+                dist = torch.dist(mean_embedding_cluster, mean_background_prototype)
+                if dist < min_dist:
+                    min_dist = dist
+                    background_cluster = cluster
 
         embeddings = torch.zeros((b * h * w), dtype=torch.int32)
         embeddings[coarse_idx] = torch.tensor(embeddings_kmeans) + 1
+        embeddings[embeddings == (background_cluster + 1)] = 0
         embeddings = rearrange(embeddings, '(b h w) -> b h w', b=b, h=h, w=w)
 
         all_embeddings[ptr: ptr + b] = embeddings
