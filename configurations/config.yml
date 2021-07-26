@@ -15,7 +15,7 @@ model_kwargs:
   classify_embedding: True
   pretraining: imagenet
   freeze_backbone: True
-  coarse_threshold: 0.9
+  coarse_threshold: 0.75
 
 checkpoint: None
 
@@ -29,7 +29,7 @@ moco_kwargs:
 epochs: 10
 optimizer: sgd
 optimizer_kwargs:
-   lr: 0.01
+   lr: 0.005
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False
@@ -44,7 +44,7 @@ train_kwargs:
   writing_per_epoch: 10
   saved_images_per_epoch: 8
   batch_size: 64
-  lambda_cl: 1.5  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
+  lambda_cl: 1.0  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
   dataset: ambulatorium  # This has no effect yet
 
 # Validation:
