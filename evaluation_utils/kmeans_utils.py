@@ -99,7 +99,7 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
 
         kmeans = MiniBatchKMeans(n_clusters=n_clusters, batch_size=1000, random_state=seed)
 
-        if p['val_kwargs']['use_pca']:
+        if p['val_kwargs']['k_means']['use_pca']:
             # In the original code they applied PCA before kmeans
             pca = PCA(n_components=32, whiten=True)
             prototypes_pca = pca.fit_transform(prototypes.numpy())
@@ -122,7 +122,8 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
 
         embeddings = torch.zeros((b * h * w), dtype=torch.int32)
         embeddings[coarse_idx] = torch.tensor(embeddings_kmeans) + 1
-        embeddings[embeddings == (background_cluster + 1)] = 0
+        if p['val_kwargs']['k_means']['remove_background_cluster']:
+            embeddings[embeddings == (background_cluster + 1)] = 0
         embeddings = rearrange(embeddings, '(b h w) -> b h w', b=b, h=h, w=w)
 
         all_embeddings[ptr: ptr + b] = embeddings

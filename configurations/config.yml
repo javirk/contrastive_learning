@@ -49,8 +49,11 @@ train_kwargs:
 
 # Validation:
 val_kwargs:
-  use_pca: True  # K-means
-  mean_var_normalization: True  # Linear classification
   batch_size: 1
   coarse_pixels_only: True
   dataset: oct_test  # 'retouch' or 'oct_test' or 'ambulatorium'
+  k_means:
+    use_pca: True
+    remove_background_cluster: False
+  linear:
+    mean_var_normalization: True
