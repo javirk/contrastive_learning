@@ -151,16 +151,23 @@ class ContrastiveModel(nn.Module):
 
                 qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes
                 # from coarse embeddings
+                qt_prob = torch.softmax(qt_pred, dim=1)
 
-                qt_pred = (torch.softmax(qt_pred, dim=1) > self.coarse_threshold)
+                qt_pred = (qt_prob > self.coarse_threshold)
                 qt_pred = qt_pred.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
-                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
+                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1)  # True/False. B x H.W x 1
+                # qt_pred_idx = torch.nonzero(qt_pred).squeeze()
 
-                qt_sum = torch.clamp(torch.sum(qt_pred, dim=1), min=1)
+                ## This is a weighted average based on the probability of each pixel
+                # Weights are zero in the pixels with background and the maximum probability in the rest
+                max_prob = qt_prob.max(dim=1).values.reshape(batch_size, -1, 1)
+                weights = torch.zeros(qt_pred.shape, device=qt_pred.device)
+                weights = torch.where(qt_pred, max_prob, weights)
 
-                features = torch.bmm(features.float(), qt_pred).squeeze(-1) / qt_sum  # B x dim
-                features = nn.functional.normalize(features.float(),
-                                                   dim=1)  # It should be a float already, but... B x dim
+                weights_sum = torch.clamp(torch.sum(weights, dim=1), min=1)
+                # Do the weighted average
+                features = torch.bmm(features.float(), weights).squeeze(-1) / weights_sum  # B x dim
+                features = nn.functional.normalize(features.float(), dim=1)
                 assert not features.isnan().any()
 
             # compute key prototypes. Negatives
