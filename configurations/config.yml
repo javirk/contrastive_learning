@@ -21,15 +21,15 @@ checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.2 # Temperature
+   T: 0.5 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
 
 # Optimizer:
-epochs: 6
+epochs: 10
 optimizer: sgd
 optimizer_kwargs:
-   lr: 0.005
+   lr: 0.01
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False
@@ -43,7 +43,7 @@ loss_kwargs:
 train_kwargs:
   writing_per_epoch: 10
   saved_images_per_epoch: 8
-  batch_size: 32
+  batch_size: 64
   lambda_cl: 1  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
   dataset: ambulatorium  # This has no effect yet
 
@@ -53,4 +53,4 @@ val_kwargs:
   mean_var_normalization: True  # Linear classification
   batch_size: 1
   coarse_pixels_only: True
-  dataset: retouch  # 'retouch' or 'oct_test' or 'ambulatorium'
+  dataset: oct_test  # 'retouch' or 'oct_test' or 'ambulatorium'
