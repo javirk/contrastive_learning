@@ -18,6 +18,7 @@ class ContrastiveModel(nn.Module):
 
         self.num_classes = p['num_classes']
         self.use_amp = p['use_amp']
+        self.coarse_threshold = p['model_kwargs']['coarse_threshold']
 
         self.K = p['moco_kwargs']['K']
         self.m = p['moco_kwargs']['m']
@@ -131,7 +132,8 @@ class ContrastiveModel(nn.Module):
             q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
             # coarse embeddings
             with torch.no_grad():
-                q_coarse = torch.softmax(q_coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
+                q_coarse = (torch.softmax(q_coarse, dim=1) > self.coarse_threshold)
+                q_coarse = q_coarse.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
                 q_coarse = (q_coarse != 0).reshape(-1)  # True/False. Shape: pixels
                 q_coarse_idx = torch.nonzero(q_coarse).squeeze()
 
@@ -150,7 +152,8 @@ class ContrastiveModel(nn.Module):
                 qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes
                 # from coarse embeddings
 
-                qt_pred = torch.softmax(qt_pred, dim=1).argmax(dim=1)  # Prediction of each pixel. B x H x W
+                qt_pred = (torch.softmax(qt_pred, dim=1) > self.coarse_threshold)
+                qt_pred = qt_pred.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
                 qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
 
                 qt_sum = torch.clamp(torch.sum(qt_pred, dim=1), min=1)
@@ -191,7 +194,8 @@ class ContrastiveModel(nn.Module):
         b, c, h, w = features.shape
         features = rearrange(features, 'b dim h w -> (b h w) dim')  # features: pixels x dim
 
-        coarse = torch.softmax(coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
+        coarse = (torch.softmax(coarse, dim=1) > self.coarse_threshold)
+        coarse = coarse.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
         coarse = (coarse != 0).reshape(-1)  # True/False. B.H.W (pixels)
         coarse_idx = torch.nonzero(coarse).squeeze()
 

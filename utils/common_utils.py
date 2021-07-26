@@ -8,6 +8,7 @@ import torchvision.transforms as transforms
 import math
 import numpy as np
 import sys
+from data.data_retriever import SegmentationDataset, ContrastiveDataset
 
 
 def copy_file(src, dst):
@@ -21,6 +22,7 @@ def read_config(path):
     with open(path) as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
     return data
+
 
 def str2bool(value, raise_exc=False):
     _true_set = {'yes', 'true', 't', 'y', '1'}
@@ -47,18 +49,36 @@ def prepare_run(root_path, config_path):
 
 
 def get_train_transformations(s=1):
-    augmentation = [#transforms.ColorJitter(0.8 * s, 0.8 * s, 0.8 * s, 0.2 * s),
-                    transforms.RandomAffine(20, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=-1),
-                    # -1 because they are normalized (-1,1)
-                    transforms.RandomHorizontalFlip(),
-                    transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5))
-                    ]
+    augmentation = [  # transforms.ColorJitter(0.8 * s, 0.8 * s, 0.8 * s, 0.2 * s),
+        transforms.RandomAffine(20, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=-1),
+        # -1 because they are normalized (-1,1)
+        transforms.RandomHorizontalFlip(),
+        transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5))
+    ]
 
     return transforms.Compose(augmentation)
+
 
 def get_val_transformations():
     augmentation = []
     return transforms.Compose(augmentation)
+
+
+def get_dataset(p, data_path, mode, common_transform=None, augment_transform=None):
+    dataset_name = p[f'{mode}_kwargs']['dataset'].lower()
+    if dataset_name == 'ambulatorium':
+        return ContrastiveDataset(data_path.joinpath('ambulatorium_all.hdf5'), common_transform=common_transform,
+                                  augment_transform=augment_transform, n_classes=p['n_classes'])
+    elif dataset_name == 'oct_test':
+        return ContrastiveDataset(data_path.joinpath('oct_test_all.hdf5'), common_transform=common_transform,
+                                  augment_transform=augment_transform, n_classes=p['n_classes'])
+    elif dataset_name == 'retouch':
+        volume_path = data_path.joinpath('Segmentation/RETOUCH/Spectralis_volume.npy')
+        labels_path = data_path.joinpath('Segmentation/RETOUCH/Spectralis_labels.npy')
+        return SegmentationDataset(volume_path, labels_path, transform=common_transform, only_fluid=True)
+    else:
+        raise ValueError(f'Invalid dataset {dataset_name}')
+
 
 def get_optimizer(p, parameters):
     if p['optimizer'] == 'sgd':

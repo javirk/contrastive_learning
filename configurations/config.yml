@@ -15,6 +15,7 @@ model_kwargs:
   classify_embedding: True
   pretraining: imagenet
   freeze_backbone: True
+  coarse_threshold: 0.85
 
 checkpoint: None
 
@@ -25,7 +26,7 @@ moco_kwargs:
    K: 128 # Negatives
 
 # Optimizer:
-epochs: 5
+epochs: 6
 optimizer: sgd
 optimizer_kwargs:
    lr: 0.005
@@ -44,6 +45,7 @@ train_kwargs:
   saved_images_per_epoch: 8
   batch_size: 32
   lambda_cl: 1  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
+  dataset: ambulatorium  # This has no effect yet
 
 # Validation:
 val_kwargs:
@@ -51,3 +53,4 @@ val_kwargs:
   mean_var_normalization: True  # Linear classification
   batch_size: 1
   coarse_pixels_only: True
+  dataset: retouch  # 'retouch' or 'oct_test' or 'ambulatorium'

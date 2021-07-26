@@ -79,9 +79,11 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
 
         if p['val_kwargs']['coarse_pixels_only']:
             coarse = qdict['cls_emb']
-            coarse = torch.softmax(coarse, dim=1).argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
+            coarse = (torch.softmax(coarse, dim=1) > p['model_kwargs']['coarse_threshold'])
+            coarse = coarse.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
             coarse = (coarse != 0).reshape(-1)  # True/False. B.H.W (pixels)
             coarse_idx = torch.nonzero(coarse).squeeze()
+
             background_idx = torch.nonzero(coarse == 0).squeeze()
             prototypes_background = torch.index_select(features, index=background_idx, dim=0)  # False pixels x dim
             prototypes_background = nn.functional.normalize(prototypes_background, dim=1)

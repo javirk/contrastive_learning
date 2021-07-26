@@ -1,6 +1,5 @@
 import torch
 from utils.logs_utils import write_to_tb, update_metrics_dict
-from modules.loss import ContrastiveLearningLoss
 
 
 def train_step(config, data, model, criterion_dict, optimizer, scaler):

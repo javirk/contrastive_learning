@@ -37,8 +37,7 @@ def main():
 
     common_t = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
     augment_t = u.get_val_transformations()
-    dataset = ContrastiveDataset(data_path.joinpath('oct_test_all.hdf5'), common_transform=common_t,
-                                 augment_transform=augment_t, n_classes=config['num_classes'])
+    dataset = u.get_dataset(config, data_path, 'val', common_transform=common_t, augment_transform=augment_t)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=num_workers)
 
     save_embeddings_to_disk(config, dataloader, model, device=device)
