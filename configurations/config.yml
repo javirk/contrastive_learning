@@ -21,12 +21,12 @@ checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.5 # Temperature
+   T: 0.05 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
 
 # Optimizer:
-epochs: 60
+epochs: 10
 optimizer: sgd
 optimizer_kwargs:
    lr: 0.005
