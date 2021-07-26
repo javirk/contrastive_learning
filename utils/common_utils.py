@@ -68,10 +68,10 @@ def get_dataset(p, data_path, mode, common_transform=None, augment_transform=Non
     dataset_name = p[f'{mode}_kwargs']['dataset'].lower()
     if dataset_name == 'ambulatorium':
         return ContrastiveDataset(data_path.joinpath('ambulatorium_all.hdf5'), common_transform=common_transform,
-                                  augment_transform=augment_transform, n_classes=p['n_classes'])
+                                  augment_transform=augment_transform, n_classes=p['num_classes'])
     elif dataset_name == 'oct_test':
         return ContrastiveDataset(data_path.joinpath('oct_test_all.hdf5'), common_transform=common_transform,
-                                  augment_transform=augment_transform, n_classes=p['n_classes'])
+                                  augment_transform=augment_transform, n_classes=p['num_classes'])
     elif dataset_name == 'retouch':
         volume_path = data_path.joinpath('Segmentation/RETOUCH/Spectralis_volume.npy')
         labels_path = data_path.joinpath('Segmentation/RETOUCH/Spectralis_labels.npy')
