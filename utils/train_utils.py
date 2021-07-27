@@ -98,6 +98,8 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_
 
             running_loss = 0.
             running_clloss = 0.
+            running_pos = 0.
+            running_neg = 0.
             running_metrics = {k: 0 for k in config['metrics'].keys()}
 
     return model, n_epoch
