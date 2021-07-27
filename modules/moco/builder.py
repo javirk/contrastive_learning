@@ -203,7 +203,7 @@ class ContrastiveModel(nn.Module):
         negative_similarity /= self.T
 
         # dequeue and enqueue
-        self._dequeue_and_enqueue(k)
+        self._dequeue_and_enqueue(k_prototypes)
 
         return negative_similarity, positive_similarity, class_prediction
 
