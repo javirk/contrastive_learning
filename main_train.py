@@ -90,6 +90,7 @@ if __name__ == '__main__':
     config = read_config(FLAGS.config)
 
     if FLAGS.ubelix == 0:
+        # Local debugging
         data_path = Path(__file__).parents[2].joinpath('Datasets')
         num_workers = 0
         config['train_kwargs']['batch_size'] = 2

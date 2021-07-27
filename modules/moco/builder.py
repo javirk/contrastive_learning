@@ -197,6 +197,7 @@ class ContrastiveModel(nn.Module):
 
     @torch.no_grad()
     def forward_validation(self, im, kmeans, debug=False):
+        self.eval()
         qdict = self.model_q(im)
         features = qdict['seg']
         coarse = qdict['cls_emb']
