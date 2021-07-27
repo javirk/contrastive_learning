@@ -19,6 +19,7 @@ class ContrastiveModel(nn.Module):
         self.num_classes = p['num_classes']
         self.use_amp = p['use_amp']
         self.coarse_threshold = p['model_kwargs']['coarse_threshold']
+        self.apply_otsu = p['train_kwargs']['apply_otsu_thresholding']
 
         self.K = p['moco_kwargs']['K']
         self.m = p['moco_kwargs']['m']
@@ -121,7 +122,7 @@ class ContrastiveModel(nn.Module):
         :param im_k: Key images (only healthy) (B x 3 x H x W)
         :return:
         """
-        batch_size = im_q.size(0)
+        batch_size, _, h, w = im_q.size()
 
         qdict = self.model_q(im_q)
         class_prediction = qdict['cls']
@@ -136,7 +137,7 @@ class ContrastiveModel(nn.Module):
         q_coarse_idx = torch.nonzero(q_coarse).squeeze()
 
         q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
-        q_prototypes = nn.functional.normalize(q_prototypes.float(), dim=1)
+        q_prototypes = nn.functional.normalize(q_prototypes, dim=1)
 
         # compute positive prototypes
         with torch.no_grad():
@@ -145,7 +146,7 @@ class ContrastiveModel(nn.Module):
             qtdict = self.model_k(im_qt)
             features = qtdict['seg']  # queries transformed: B x dim x H x W
             features = rearrange(features, 'b d h w -> b d (h w)')
-            features = nn.functional.normalize(features.float(), dim=1)  # B x dim
+            features = nn.functional.normalize(features, dim=1)  # B x dim x h.w
 
             qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes
             # from coarse embeddings
@@ -165,22 +166,38 @@ class ContrastiveModel(nn.Module):
             weights_sum = torch.clamp(torch.sum(weights, dim=1), min=1)
             # Do the weighted average
             features = torch.bmm(features.float(), weights).squeeze(-1) / weights_sum  # B x dim
-            features = nn.functional.normalize(features.float(), dim=1)
+            features = nn.functional.normalize(features, dim=1)
             assert not features.isnan().any()
 
         # compute key prototypes. Negatives
         with torch.no_grad():  # no gradient to keys
             kdict = self.model_k(im_k)  # keys: N x dim x H x W
             k = kdict['seg']
-            k = k.mean(dim=(2, 3))  # N x dim
-            k = nn.functional.normalize(k.float(), dim=1)
+            if self.apply_otsu:
+                import numpy as np
+                from skimage.filters import threshold_otsu
+                from skimage.morphology import opening, closing
+                im_eroded = opening(im_k.cpu())
+
+                binary_im = torch.zeros((batch_size, h, w))
+                for i in range(batch_size):
+                    im_closed = closing(im_eroded[i, 0], np.ones((5, 5)))
+                    binary_im[i] = torch.from_numpy(im_closed > threshold_otsu(im_closed)).int()
+
+                binary_im = rearrange(binary_im, 'b h w -> b (h w)')
+                k = rearrange(k, 'b d h w -> b d (h w)')
+                k_prototypes = torch.bmm(k, binary_im.unsqueeze(-1)).squeeze(-1)  # N x dim
+            else:
+                k_prototypes = k.mean(dim=(2, 3))  # N x dim
+
+            k_prototypes = nn.functional.normalize(k_prototypes, dim=1)
 
         positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
-        l_batch = torch.matmul(q_prototypes, k.t())  # shape: pixels x negatives in batch
+        l_batch = torch.matmul(q_prototypes, k_prototypes.t())  # shape: pixels x negatives in batch
         negatives = self.queue.clone().detach()  # shape: dim x negatives
         l_mem = torch.matmul(q_prototypes, negatives)  # shape: pixels x negatives in memory
-        negative_similarity = torch.cat([l_batch, l_mem],
-                                        dim=-1)  # shape: pixels x (negatives batch + negatives memory)
+        negative_similarity = torch.cat([l_batch, l_mem], dim=-1)  # pixels x (negatives batch + negatives memory)
+
         # apply temperature
         positive_similarity /= self.T
         negative_similarity /= self.T
