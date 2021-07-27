@@ -2,23 +2,22 @@ import torch
 from utils.logs_utils import write_to_tb, update_metrics_dict
 
 
-def train_step(config, data, model, criterion_dict, optimizer, scaler):
+def train_step(config, data, model, criterion_dict, optimizer):
     optimizer.zero_grad()
 
     input_batch = data['images'].to(config['device'])
     transformed_batch = data['transformed_images'].to(config['device'])
     healthy_batch = data['healthy_images'].to(config['device'])
     labels = data['labels'].to(config['device'])
-    with torch.cuda.amp.autocast(enabled=config['use_amp']):
-        neg, pos, class_prediction = model(input_batch, transformed_batch, healthy_batch)
-        cl_loss = criterion_dict['CL'](pos, neg)
 
-        class_loss = criterion_dict['label'](class_prediction, labels)
-        loss = config['train_kwargs']['lambda_cl'] * cl_loss + class_loss
+    neg, pos, class_prediction = model(input_batch, transformed_batch, healthy_batch)
 
-    scaler.scale(loss).backward()
-    scaler.step(optimizer)
-    scaler.update()
+    cl_loss = criterion_dict['CL'](pos, neg)
+    class_loss = criterion_dict['label'](class_prediction, labels)
+    loss = config['train_kwargs']['lambda_cl'] * cl_loss + class_loss
+
+    loss.backward()
+    optimizer.step()
 
     ## Now compute the metrics and return
     y_pred = torch.sigmoid(class_prediction).detach().cpu().numpy().ravel()
@@ -62,14 +61,14 @@ def validation_step(data, model, criterion, metrics, device):
     return m, loss.item()
 
 
-def train_epoch(config, model, loader, criterion_dict, optimizer, scaler, writer, epoch_num):
+def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_num):
     writing_freq = config['writing_freq']
     model.train()
     running_loss = 0.
     running_clloss = 0.
     running_metrics = {k: 0 for k in config['metrics'].keys()}
     for i, data in enumerate(loader):
-        outputs = train_step(config, data, model, criterion_dict, optimizer, scaler)
+        outputs = train_step(config, data, model, criterion_dict, optimizer)
         model, metrics_results, loss, cl_loss = outputs
 
         running_loss += loss
@@ -79,8 +78,8 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, scaler, writer
         if i % writing_freq == (writing_freq - 1):
             batch_size = len(data['images'])
             n_epoch = epoch_num * len(loader) + i + 1
-            epoch_loss = running_loss / (writing_freq * batch_size)
-            epoch_clloss = running_clloss / (writing_freq * batch_size)
+            epoch_loss = running_loss / writing_freq
+            epoch_clloss = running_clloss / writing_freq
             running_metrics = {k: v / writing_freq for k, v in running_metrics.items()}
             running_metrics['loss'] = epoch_loss
             running_metrics['CL_loss'] = epoch_clloss

@@ -37,15 +37,13 @@ def main():
     opt = get_optimizer(config, model.parameters())
     print(f'Chosen optimizer {opt}')
 
-    scaler = torch.cuda.amp.GradScaler(enabled=config['use_amp'])
-
     label_criterion = nn.BCEWithLogitsLoss()
     cl_criterion = ContrastiveLearningLoss(reduction='mean')
     criterion = {'label': label_criterion, 'CL': cl_criterion}
 
     model = load_pretrained_backbone(config, model, device=device)
     model = load_pretrained_aspp(config, model, device=device)
-    model, opt, scaler, start_epoch = load_checkpoint(config, model, opt, scaler, device=device)
+    model, opt, start_epoch = load_checkpoint(config, model, opt, device=device)
     ckpt_path = root_path.joinpath('ckpts', f'{current_time}.pth')
 
     config['metrics'] = {}
@@ -58,15 +56,13 @@ def main():
         print('Adjusted learning rate to {:.5f}'.format(lr))
 
         print('Train...')
-        model, _ = train_epoch(config, model, dataloader, criterion, opt, scaler, writer, epoch)
+        model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)
 
         print('Sample results...')
         sample_results(model, dataset, config['num_classes'], config['train_kwargs']['saved_images_per_epoch'], device,
                        writer=writer, epoch_num=epoch, debug=True)
 
         ckpt = {'optimizer': opt.state_dict(), 'model': model.state_dict(), 'epoch': epoch + 1}
-        if config['use_amp']:
-            ckpt['scaler'] = scaler.state_dict()
         torch.save(ckpt, ckpt_path)
 
 
@@ -103,7 +99,7 @@ if __name__ == '__main__':
     root_path = Path(__file__).resolve().parents[0]
     if FLAGS.mixed_precision:
         import warnings
-        warnings.warn('Mixed precision has stability issues for now')
+        raise NotImplementedError('Mixed precision is not implemented for now')
     config['use_amp'] = FLAGS.mixed_precision
 
     main()

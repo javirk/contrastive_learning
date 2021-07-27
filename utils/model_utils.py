@@ -39,7 +39,7 @@ def load_pretrained_aspp(config, model, device='cpu'):
     return model
 
 
-def load_checkpoint(config, model, optimizer, scaler, device='cpu', mode='train'):
+def load_checkpoint(config, model, optimizer, device='cpu', mode='train'):
     epoch = 0
     if os.path.exists('ckpts/' + config['checkpoint']):
         filename = config['checkpoint']
@@ -48,13 +48,11 @@ def load_checkpoint(config, model, optimizer, scaler, device='cpu', mode='train'
         if mode == 'train':
             optimizer.load_state_dict(state_dict['optimizer'])
             epoch = state_dict['epoch']
-            if config['use_amp']:
-                scaler.load_state_dict(state_dict['scaler'])
         print(f'Loaded checkpoint {filename}')
     else:
         print('No checkpoint loaded')
 
-    return model, optimizer, scaler, epoch
+    return model, optimizer, epoch
 
 
 def get_model(p):
