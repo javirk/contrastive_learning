@@ -76,6 +76,7 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_
         running_loss += loss
         running_clloss += cl_loss
         running_pos += positive_sim
+        running_neg += negative_sim
         running_metrics = update_metrics_dict(running_metrics, metrics_results)
 
         if i % writing_freq == (writing_freq - 1):
