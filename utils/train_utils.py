@@ -31,7 +31,7 @@ def train_step(config, data, model, criterion_dict, optimizer):
         else:
             m[f'{name}'] = metric(y_true.astype('uint8'), y_pred)
 
-    return model, m, loss.item(), cl_loss.item()
+    return model, m, loss.item(), cl_loss.item(), pos.item()
 
 
 def validation_step(data, model, criterion, metrics, device):
@@ -66,13 +66,15 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_
     model.train()
     running_loss = 0.
     running_clloss = 0.
+    running_pos = 0.
     running_metrics = {k: 0 for k in config['metrics'].keys()}
     for i, data in enumerate(loader):
         outputs = train_step(config, data, model, criterion_dict, optimizer)
-        model, metrics_results, loss, cl_loss = outputs
+        model, metrics_results, loss, cl_loss, positive_sim = outputs
 
         running_loss += loss
         running_clloss += cl_loss
+        running_pos += positive_sim
         running_metrics = update_metrics_dict(running_metrics, metrics_results)
 
         if i % writing_freq == (writing_freq - 1):
@@ -80,9 +82,11 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_
             n_epoch = epoch_num * len(loader) + i + 1
             epoch_loss = running_loss / writing_freq
             epoch_clloss = running_clloss / writing_freq
+            epoch_pos = running_pos / writing_freq
             running_metrics = {k: v / writing_freq for k, v in running_metrics.items()}
             running_metrics['loss'] = epoch_loss
             running_metrics['CL_loss'] = epoch_clloss
+            running_metrics['Positive'] = epoch_pos
             print(f'i={i}, {running_metrics}')
             write_to_tb(writer, running_metrics.keys(), running_metrics.values(), n_epoch, phase=f'train')
 

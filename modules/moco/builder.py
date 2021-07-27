@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 
-from modules.loss import ContrastiveLearningLoss
+from utils.common_utils import otsu_thresholding
 from utils.model_utils import get_model
 
 
@@ -174,19 +174,7 @@ class ContrastiveModel(nn.Module):
             kdict = self.model_k(im_k)  # keys: N x dim x H x W
             k = kdict['seg']
             if self.apply_otsu:
-                import numpy as np
-                from skimage.filters import threshold_otsu
-                from skimage.morphology import opening, closing
-                im_eroded = opening(im_k.cpu())
-
-                binary_im = torch.zeros((batch_size, h, w), device=k.device)
-                for i in range(batch_size):
-                    im_closed = closing(im_eroded[i, 0], np.ones((5, 5)))
-                    binary_im[i] = torch.from_numpy(im_closed > threshold_otsu(im_closed)).int()
-
-                binary_im = rearrange(binary_im, 'b h w -> b (h w)')
-                k = rearrange(k, 'b d h w -> b d (h w)')
-                k_prototypes = torch.bmm(k, binary_im.unsqueeze(-1)).squeeze(-1)  # N x dim
+                k_prototypes = otsu_thresholding(im_k, k)
             else:
                 k_prototypes = k.mean(dim=(2, 3))  # N x dim
 

@@ -135,3 +135,23 @@ def segmentation_to_onehot(seg, num_classes):
     one_hot = torch.FloatTensor(seg.size(0), num_classes, seg.size(2), seg.size(3)).zero_()
     one_hot.scatter_(1, seg, 1)
     return one_hot.bool()
+
+
+def otsu_thresholding(image_batch, prototypes):
+    import numpy as np
+    from skimage.filters import threshold_otsu
+    from skimage.morphology import opening, closing
+    from einops import rearrange
+
+    batch_size, _, h, w = image_batch.size()
+    im_eroded = opening(image_batch.cpu())
+
+    binary_im = torch.zeros((batch_size, h, w), device=prototypes.device)
+    for i in range(batch_size):
+        im_closed = closing(im_eroded[i, 0], np.ones((5, 5)))
+        binary_im[i] = torch.from_numpy(im_closed > threshold_otsu(im_closed)).int()
+
+    binary_im = rearrange(binary_im, 'b h w -> b (h w)')
+    prototypes = rearrange(prototypes, 'b d h w -> b d (h w)')
+    prototypes = torch.bmm(prototypes, binary_im.unsqueeze(-1)).squeeze(-1)  # N x dim
+    return prototypes
