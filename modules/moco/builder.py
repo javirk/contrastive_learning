@@ -174,8 +174,8 @@ class ContrastiveModel(nn.Module):
             with torch.no_grad():  # no gradient to keys
                 kdict = self.model_k(im_k)  # keys: N x dim x H x W
                 k = kdict['seg']
-                k = nn.functional.normalize(k.float(), dim=1)
                 k = k.mean(dim=(2, 3))  # N x dim
+                k = nn.functional.normalize(k.float(), dim=1)
 
             positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
             l_batch = torch.matmul(q_prototypes, k.t())  # shape: pixels x negatives in batch

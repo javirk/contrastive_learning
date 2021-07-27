@@ -15,13 +15,13 @@ model_kwargs:
   classify_embedding: True
   pretraining: imagenet
   freeze_backbone: True
-  coarse_threshold: 0.6
+  coarse_threshold: 0.5
 
 checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.075 # Temperature
+   T: 0.5 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
 

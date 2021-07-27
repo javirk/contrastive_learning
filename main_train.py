@@ -95,6 +95,7 @@ if __name__ == '__main__':
     if FLAGS.ubelix == 0:
         data_path = Path(__file__).parents[2].joinpath('Datasets')
         num_workers = 0
+        config['train_kwargs']['batch_size'] = 2
     else:
         data_path = Path('/storage/homefs/jg20n729/OCT_Detection/Datasets')
         num_workers = 8

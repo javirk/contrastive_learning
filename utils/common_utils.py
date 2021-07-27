@@ -53,7 +53,7 @@ def get_train_transformations(s=1):
         transforms.RandomAffine(25, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=-1),
         # -1 because they are normalized (-1,1)
         transforms.RandomHorizontalFlip(),
-        transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5))
+        transforms.GaussianBlur(kernel_size=(3, 5), sigma=(0.1, 3))
     ]
 
     return transforms.Compose(augmentation)
