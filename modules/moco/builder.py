@@ -179,7 +179,7 @@ class ContrastiveModel(nn.Module):
                 from skimage.morphology import opening, closing
                 im_eroded = opening(im_k.cpu())
 
-                binary_im = torch.zeros((batch_size, h, w))
+                binary_im = torch.zeros((batch_size, h, w), device=k.device)
                 for i in range(batch_size):
                     im_closed = closing(im_eroded[i, 0], np.ones((5, 5)))
                     binary_im[i] = torch.from_numpy(im_closed > threshold_otsu(im_closed)).int()
