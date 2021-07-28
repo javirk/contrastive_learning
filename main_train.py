@@ -55,13 +55,12 @@ def main():
         lr = adjust_learning_rate(config, opt, epoch)
         print('Adjusted learning rate to {:.5f}'.format(lr))
 
-        print('Sample results...')
-        # sample_results(model, dataset, config['num_classes'], config['train_kwargs']['saved_images_per_epoch'], device,
-        #                writer=writer, epoch_num=epoch, debug=True)
-
         print('Train...')
         model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)
 
+        print('Sample results...')
+        # sample_results(model, dataset, config['num_classes'], config['train_kwargs']['saved_images_per_epoch'], device,
+        #                writer=writer, epoch_num=epoch, debug=True)
 
         ckpt = {'optimizer': opt.state_dict(), 'model': model.state_dict(), 'epoch': epoch + 1}
         torch.save(ckpt, ckpt_path)
