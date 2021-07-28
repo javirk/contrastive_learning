@@ -13,9 +13,12 @@ from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pr
 from utils.train_utils import train_epoch
 from evaluation_utils.kmeans_utils import sample_results
 from modules.loss import ContrastiveLearningLoss
+from random import randint
+from time import sleep
 
 
 def main():
+    sleep(randint(1, 50))  # This is for the SLURM array jobs
     writer, device, current_time = prepare_run(root_path, FLAGS.config)
     config['device'] = device
     common_t = transforms.Compose([transforms.ToTensor(), transforms.RandomHorizontalFlip(),
