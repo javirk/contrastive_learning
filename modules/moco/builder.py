@@ -127,17 +127,23 @@ class ContrastiveModel(nn.Module):
         qdict = self.model_q(im_q)
         class_prediction = qdict['cls']
         q = qdict['seg']  # queries: B x dim x H x W
-        q = rearrange(q, 'b dim h w -> (b h w) dim')  # queries: pixels x dim
+        q = rearrange(q, 'b dim h w -> b (h w) dim')  # queries: B x pixels x dim
 
-        q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
-        # coarse embeddings
+        q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. Coarse embeddings
+
         q_coarse = (torch.softmax(q_coarse, dim=1) > self.coarse_threshold)
         q_coarse = q_coarse.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
-        q_coarse = (q_coarse != 0).reshape(-1)  # True/False. Shape: pixels
-        q_coarse_idx = torch.nonzero(q_coarse).squeeze()
+        q_coarse = (q_coarse != 0).reshape(batch_size, -1, 1)  # True/False. Shape: B x pixels x 1
+        q_true_idx = torch.nonzero(q_coarse.reshape(-1)).squeeze()  # Indexes. True pixels
 
-        q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
+        q_prototypes = torch.zeros_like(q)  # B x pixels x dim
+        q_prototypes = torch.where(q_coarse, q, q_prototypes)  # B x pixels x dim
+        q_true = rearrange(q, 'b p dim -> (b p) dim')
+        q_true_prototypes = torch.index_select(q_true, index=q_true_idx, dim=0)  # True pixels x dim
+
         q_prototypes = nn.functional.normalize(q_prototypes, dim=1)
+        # This has virtually the same information as q_prototypes, but removing the pixels that are healthy
+        q_true_prototypes = nn.functional.normalize(q_true_prototypes, dim=1)
 
         # compute positive prototypes
         with torch.no_grad():
@@ -161,11 +167,11 @@ class ContrastiveModel(nn.Module):
             # Weights are zero in the pixels with background and the maximum probability in the rest
             max_prob = qt_prob.max(dim=1).values.reshape(batch_size, -1, 1)
             weights = torch.zeros(qt_pred.shape, device=qt_pred.device)
-            weights = torch.where(qt_pred, max_prob, weights)
+            weights = torch.where(qt_pred, max_prob, weights)  # B x H.W x 1
 
             weights_sum = torch.clamp(torch.sum(weights, dim=1), min=1)
             # Do the weighted average
-            features = torch.bmm(features.float(), weights).squeeze(-1) / weights_sum  # B x dim
+            features = torch.bmm(features, weights).squeeze(-1) / weights_sum  # B x dim
             features = nn.functional.normalize(features, dim=1)
             assert not features.isnan().any()
 
@@ -180,10 +186,14 @@ class ContrastiveModel(nn.Module):
 
             k_prototypes = nn.functional.normalize(k_prototypes, dim=1)
 
-        positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
-        l_batch = torch.matmul(q_prototypes, k_prototypes.t())  # shape: pixels x negatives in batch
+        positive_similarity = torch.bmm(q_prototypes, features.unsqueeze(-1)).squeeze(-1)  # shape: batch x pixels
+        positive_similarity = rearrange(positive_similarity, 'b p -> (b p)')
+        positive_similarity = torch.index_select(positive_similarity, index=q_true_idx, dim=0)  # True pixels
+
+        l_batch = torch.matmul(q_true_prototypes, k_prototypes.t())  # shape: true pixels x N
         negatives = self.queue.clone().detach()  # shape: dim x negatives
-        l_mem = torch.matmul(q_prototypes, negatives)  # shape: pixels x negatives in memory
+
+        l_mem = torch.matmul(q_true_prototypes, negatives)  # shape: true pixels x negatives in memory
         negative_similarity = torch.cat([l_batch, l_mem], dim=-1)  # pixels x (negatives batch + negatives memory)
 
         # apply temperature

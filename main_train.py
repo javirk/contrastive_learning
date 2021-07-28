@@ -56,8 +56,8 @@ def main():
         print('Adjusted learning rate to {:.5f}'.format(lr))
 
         print('Sample results...')
-        sample_results(model, dataset, config['num_classes'], config['train_kwargs']['saved_images_per_epoch'], device,
-                       writer=writer, epoch_num=epoch, debug=True)
+        # sample_results(model, dataset, config['num_classes'], config['train_kwargs']['saved_images_per_epoch'], device,
+        #                writer=writer, epoch_num=epoch, debug=True)
 
         print('Train...')
         model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)

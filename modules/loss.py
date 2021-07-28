@@ -10,18 +10,19 @@ class ContrastiveLearningLoss(nn.Module):
 
     def forward(self, positive_similarity, negative_similarity):
         """
-        Computes the CL loss
-        :param positive_similarity: torch.Tensor, sim(z, zM+) Shape: pixels x B
-        :param negative_similarity: torch.Tensor, sim(zj, zM-j) Shape: pixels x (queue + batch samples)
+        Computes the CL loss.
+
+        True pixels should be the same number as (positive_similarity == 0).any(0).sum()
+        :param positive_similarity: torch.Tensor, sim(z, zM+) Shape: true pixels
+        :param negative_similarity: torch.Tensor, sim(zj, zM-j) Shape: true pixels x (queue + batch samples)
         :return:
         """
-        positive_similarity = rearrange(positive_similarity, 'p b -> b p')
 
         den = torch.sum(torch.exp(negative_similarity), dim=-1) + torch.exp(positive_similarity)
 
         l = - positive_similarity + torch.log(den)
 
         if self.reduction == 'mean':
-            return torch.mean(l)
+            return l.mean()
         else:
             return l
