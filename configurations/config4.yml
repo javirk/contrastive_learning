@@ -1,0 +1,60 @@
+num_classes: 3
+
+# Model
+model: deeplab
+backbone: resnet50
+backbone_kwargs:
+  dilated: True
+  pretraining: resnet50_dilation.pth  # Filename of the pretraining weights (only backbone)
+  padding_mode: zeros
+model_kwargs:
+  ndim: 32
+  upsample: True
+  upsample_embedding_mode: nearest
+  use_classification_head: True
+  classify_embedding: True
+  pretraining: imagenet
+  freeze_backbone: True
+  coarse_threshold: 0.75
+
+checkpoint: None
+
+# MoCo
+moco_kwargs:
+   T: 0.5 # Temperature
+   m: 0.999 # Momentum
+   K: 128 # Negatives
+
+# Optimizer:
+epochs: 40
+optimizer: sgd
+optimizer_kwargs:
+   lr: 0.005
+   weight_decay: 0.0001
+   momentum: 0.9
+   nesterov: False
+scheduler: poly
+
+# Loss
+loss_kwargs:
+  reduction: mean
+
+# Train:
+train_kwargs:
+  writing_per_epoch: 10
+  saved_images_per_epoch: 4
+  batch_size: 64
+  lambda_cl: 1.0  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
+  dataset: ambulatorium  # This has no effect yet
+  apply_otsu_thresholding: True
+
+# Validation:
+val_kwargs:
+  batch_size: 1
+  coarse_pixels_only: True
+  dataset: ambulatorium  # 'retouch' or 'oct_test' or 'ambulatorium'
+  k_means:
+    use_pca: True
+    remove_background_cluster: False
+  linear:
+    mean_var_normalization: True

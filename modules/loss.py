@@ -18,7 +18,7 @@ class ContrastiveLearningLoss(nn.Module):
         :return:
         """
 
-        den = torch.sum(torch.exp(negative_similarity), dim=-1) + torch.exp(positive_similarity)
+        den = torch.sum(torch.exp(negative_similarity), dim=-1) #+ torch.exp(positive_similarity)
 
         l = - positive_similarity + torch.log(den)
 
