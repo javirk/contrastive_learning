@@ -197,7 +197,7 @@ def save_average_embeddings(p, val_loader, model, seed=1234, device='cpu'):
     print('Saving results')
     np.save(os.path.join(p['embedding_dir'], f'mean_embeddings_{dataset_name}.npy'))
 
-
+@torch.no_grad()
 def train_kmeans(p, val_loader, model, seed=1234, device='cpu'):
     """
     Train a kmeans. Basically the same function as save_average_embeddings
