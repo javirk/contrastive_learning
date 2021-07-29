@@ -274,10 +274,10 @@ def predict_trained_kmeans(p, val_loader, model, device='cpu'):
         filename = os.path.join(p['embedding_dir'], f'embeddings_trainedkmeans_{dataset_name}.npy')
 
     # Load the models
-    with open(f"trained_models/pca_{dataset_name}_{p['checkpoint'][:-4]}.pkl", "wb") as f:
+    with open(f"trained_models/pca_{dataset_name}_{p['checkpoint'][:-4]}.pkl", "rb") as f:
         pca = pickle.load(f)
 
-    with open(f"trained_models/kmeans_{dataset_name}_{p['checkpoint'][:-4]}.pkl", "wb") as f:
+    with open(f"trained_models/kmeans_{dataset_name}_{p['checkpoint'][:-4]}.pkl", "rb") as f:
         kmeans = pickle.load(f)
 
     all_embeddings = torch.zeros((len(val_loader.sampler), 496, 512)).to(device)
