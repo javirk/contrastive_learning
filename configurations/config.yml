@@ -23,7 +23,7 @@ checkpoint: None
 moco_kwargs:
    T: 0.25 # Temperature
    m: 0.999 # Momentum
-   K: 256 # Negatives
+   K: 128 # Negatives
 
 # Optimizer:
 epochs: 40
