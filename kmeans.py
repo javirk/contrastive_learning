@@ -42,7 +42,7 @@ def main():
 
     save_embeddings_to_disk(config, dataloader, model, device=device)
     train_kmeans(config, dataloader, model, device=device)
-    predict_trained_kmeans(config, dataloader, model)
+    predict_trained_kmeans(config, dataloader, model, device=device)
 
 
 if __name__ == '__main__':
