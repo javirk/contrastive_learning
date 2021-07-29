@@ -23,7 +23,7 @@ def main():
 
     model = load_pretrained_backbone(config, model, device=device)
     model = load_pretrained_aspp(config, model, device=device)
-    model, _, _, start_epoch = load_checkpoint(config, model, None, None, device=device, mode='val')
+    model, _, start_epoch = load_checkpoint(config, model, None, device=device, mode='val')
 
     model_date = config['checkpoint'].split('.')[0].split('-')[1]
     output_folder = model_date[-6:]
