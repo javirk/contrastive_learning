@@ -144,11 +144,12 @@ def otsu_thresholding(image_batch, prototypes):
     from einops import rearrange
 
     batch_size, _, h, w = image_batch.size()
-    im_eroded = opening(image_batch.cpu())
+    image_batch = image_batch.cpu()
 
     binary_im = torch.zeros((batch_size, h, w), device=prototypes.device)
     for i in range(batch_size):
-        im_closed = closing(im_eroded[i, 0], np.ones((5, 5)))
+        im_eroded = opening(image_batch[i,0])
+        im_closed = closing(im_eroded, np.ones((5, 5)))
         binary_im[i] = torch.from_numpy(im_closed > threshold_otsu(im_closed)).int()
 
     binary_im = rearrange(binary_im, 'b h w -> b (h w)')
