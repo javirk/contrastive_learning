@@ -23,13 +23,13 @@ checkpoint: None
 moco_kwargs:
    T: 0.1 # Temperature
    m: 0.999 # Momentum
-   K: 128 # Negatives
+   K: 256 # Negatives
 
 # Optimizer:
 epochs: 10
 optimizer: sgd
 optimizer_kwargs:
-   lr: 0.005
+   lr: 0.01
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False
