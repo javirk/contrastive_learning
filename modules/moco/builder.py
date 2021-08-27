@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 
-from modules.loss import ContrastiveLearningLoss
+from utils.common_utils import otsu_thresholding
 from utils.model_utils import get_model
 
 
@@ -19,6 +19,7 @@ class ContrastiveModel(nn.Module):
         self.num_classes = p['num_classes']
         self.use_amp = p['use_amp']
         self.coarse_threshold = p['model_kwargs']['coarse_threshold']
+        self.apply_otsu = p['train_kwargs']['apply_otsu_thresholding']
 
         self.K = p['moco_kwargs']['K']
         self.m = p['moco_kwargs']['m']
@@ -121,72 +122,92 @@ class ContrastiveModel(nn.Module):
         :param im_k: Key images (only healthy) (B x 3 x H x W)
         :return:
         """
-        with torch.cuda.amp.autocast(enabled=self.use_amp):
-            batch_size = im_q.size(0)
+        batch_size, _, h, w = im_q.size()
 
-            qdict = self.model_q(im_q)
-            class_prediction = qdict['cls']
-            q = qdict['seg']  # queries: B x dim x H x W
-            q = rearrange(q, 'b dim h w -> (b h w) dim')  # queries: pixels x dim
+        qdict = self.model_q(im_q)
+        class_prediction = qdict['cls']
+        q = qdict['seg']  # queries: B x dim x H x W
+        q = rearrange(q, 'b dim h w -> b (h w) dim')  # queries: B x pixels x dim
 
-            q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes from
-            # coarse embeddings
-            with torch.no_grad():
-                q_coarse = (torch.softmax(q_coarse, dim=1) > self.coarse_threshold)
-                q_coarse = q_coarse.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
-                q_coarse = (q_coarse != 0).reshape(-1)  # True/False. Shape: pixels
-                q_coarse_idx = torch.nonzero(q_coarse).squeeze()
+        q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. Coarse embeddings
 
-            q_prototypes = torch.index_select(q, index=q_coarse_idx, dim=0)  # True pixels x dim
-            q_prototypes = nn.functional.normalize(q_prototypes.float(), dim=1)
+        q_coarse = (torch.softmax(q_coarse, dim=1) > self.coarse_threshold)
+        q_coarse = q_coarse.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
+        q_coarse = (q_coarse != 0).reshape(batch_size, -1, 1)  # True/False. Shape: B x pixels x 1
+        q_true_idx = torch.nonzero(q_coarse.reshape(-1)).squeeze()  # Indexes. True pixels
 
-            # compute positive prototypes
-            with torch.no_grad():
-                self._momentum_update_key_encoder()  # update the key encoder
+        q_prototypes = torch.zeros_like(q)  # B x pixels x dim
+        q_prototypes = torch.where(q_coarse, q, q_prototypes)  # B x pixels x dim
+        q_true = rearrange(q, 'b p dim -> (b p) dim')
+        q_true_prototypes = torch.index_select(q_true, index=q_true_idx, dim=0)  # True pixels x dim
 
-                qtdict = self.model_k(im_qt)
-                features = qtdict['seg']  # queries transformed: B x dim x H x W
-                features = rearrange(features, 'b d h w -> b d (h w)')
-                features = nn.functional.normalize(features.float(), dim=1)  # B x dim
+        q_prototypes = nn.functional.normalize(q_prototypes, dim=1)
+        # This has virtually the same information as q_prototypes, but removing the pixels that are healthy
+        q_true_prototypes = nn.functional.normalize(q_true_prototypes, dim=1)
 
-                qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes
-                # from coarse embeddings
+        # compute positive prototypes
+        with torch.no_grad():
+            self._momentum_update_key_encoder()  # update the key encoder
 
-                qt_pred = (torch.softmax(qt_pred, dim=1) > self.coarse_threshold)
-                qt_pred = qt_pred.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
-                qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1).float()  # True/False. B x H.W x 1
+            qtdict = self.model_k(im_qt)
+            features = qtdict['seg']  # queries transformed: B x dim x H x W
+            features = rearrange(features, 'b d h w -> b d (h w)')
+            features = nn.functional.normalize(features, dim=1)  # B x dim x h.w
 
-                qt_sum = torch.clamp(torch.sum(qt_pred, dim=1), min=1)
+            qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes
+            # from coarse embeddings
+            qt_prob = torch.softmax(qt_pred, dim=1)
 
-                features = torch.bmm(features.float(), qt_pred).squeeze(-1) / qt_sum  # B x dim
-                features = nn.functional.normalize(features.float(),
-                                                   dim=1)  # It should be a float already, but... B x dim
-                assert not features.isnan().any()
+            qt_pred = (qt_prob > self.coarse_threshold)
+            qt_pred = qt_pred.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
+            qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1)  # True/False. B x H.W x 1
+            # qt_pred_idx = torch.nonzero(qt_pred).squeeze()
 
-            # compute key prototypes. Negatives
-            with torch.no_grad():  # no gradient to keys
-                kdict = self.model_k(im_k)  # keys: N x dim x H x W
-                k = kdict['seg']
-                k = nn.functional.normalize(k.float(), dim=1)
-                k = k.mean(dim=(2, 3))  # N x dim
+            ## This is a weighted average based on the probability of each pixel
+            # Weights are zero in the pixels with background and the maximum probability in the rest
+            max_prob = qt_prob.max(dim=1).values.reshape(batch_size, -1, 1)
+            weights = torch.zeros(qt_pred.shape, device=qt_pred.device)
+            weights = torch.where(qt_pred, max_prob, weights)  # B x H.W x 1
 
-            positive_similarity = torch.matmul(q_prototypes, features.t())  # shape: pixels x batch
-            l_batch = torch.matmul(q_prototypes, k.t())  # shape: pixels x negatives in batch
-            negatives = self.queue.clone().detach()  # shape: dim x negatives
-            l_mem = torch.matmul(q_prototypes, negatives)  # shape: pixels x negatives in memory
-            negative_similarity = torch.cat([l_batch, l_mem],
-                                            dim=-1)  # shape: pixels x (negatives batch + negatives memory)
-            # apply temperature
-            positive_similarity /= self.T
-            negative_similarity /= self.T
+            weights_sum = torch.clamp(torch.sum(weights, dim=1), min=1)
+            # Do the weighted average
+            features = torch.bmm(features, weights).squeeze(-1) / weights_sum  # B x dim
+            features = nn.functional.normalize(features, dim=1)
+            assert not features.isnan().any()
+
+        # compute key prototypes. Negatives
+        with torch.no_grad():  # no gradient to keys
+            kdict = self.model_k(im_k)  # keys: N x dim x H x W
+            k = kdict['seg']
+            if self.apply_otsu:
+                k_prototypes = otsu_thresholding(im_k, k)
+            else:
+                k_prototypes = k.mean(dim=(2, 3))  # N x dim
+
+            k_prototypes = nn.functional.normalize(k_prototypes, dim=1)
+
+        positive_similarity = torch.bmm(q_prototypes, features.unsqueeze(-1)).squeeze(-1)  # shape: batch x pixels
+        positive_similarity = rearrange(positive_similarity, 'b p -> (b p)')
+        positive_similarity = torch.index_select(positive_similarity, index=q_true_idx, dim=0)  # True pixels
+
+        l_batch = torch.matmul(q_true_prototypes, k_prototypes.t())  # shape: true pixels x N
+        negatives = self.queue.clone().detach()  # shape: dim x negatives
+
+        l_mem = torch.matmul(q_true_prototypes, negatives)  # shape: true pixels x negatives in memory
+        negative_similarity = torch.cat([l_batch, l_mem], dim=-1)  # pixels x (negatives batch + negatives memory)
+
+        # apply temperature
+        positive_similarity /= self.T
+        negative_similarity /= self.T
 
         # dequeue and enqueue
-        self._dequeue_and_enqueue(k)
+        self._dequeue_and_enqueue(k_prototypes)
 
         return negative_similarity, positive_similarity, class_prediction
 
     @torch.no_grad()
     def forward_validation(self, im, kmeans, debug=False):
+        self.eval()
         qdict = self.model_q(im)
         features = qdict['seg']
         coarse = qdict['cls_emb']

@@ -10,26 +10,26 @@ backbone_kwargs:
 model_kwargs:
   ndim: 32
   upsample: True
-  upsample_embedding_mode: bilinear
+  upsample_embedding_mode: nearest
   use_classification_head: True
   classify_embedding: True
   pretraining: imagenet
   freeze_backbone: True
-  coarse_threshold: 0.80
+  coarse_threshold: 0.75
 
 checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.1 # Temperature
+   T: 0.5 # Temperature
    m: 0.999 # Momentum
-   K: 256 # Negatives
+   K: 128 # Negatives
 
 # Optimizer:
-epochs: 10
+epochs: 40
 optimizer: sgd
 optimizer_kwargs:
-   lr: 0.01
+   lr: 0.005
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False
@@ -41,9 +41,9 @@ loss_kwargs:
 
 # Train:
 train_kwargs:
-  batch_size: 64
   writing_per_epoch: 10
   saved_images_per_epoch: 4
+  batch_size: 64
   lambda_cl: 1.0  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
   dataset: ambulatorium  # This has no effect yet
   apply_otsu_thresholding: True

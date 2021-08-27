@@ -50,10 +50,10 @@ def prepare_run(root_path, config_path):
 
 def get_train_transformations(s=1):
     augmentation = [  # transforms.ColorJitter(0.8 * s, 0.8 * s, 0.8 * s, 0.2 * s),
-        transforms.RandomAffine(20, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=-1),
+        transforms.RandomAffine(25, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=-1),
         # -1 because they are normalized (-1,1)
         transforms.RandomHorizontalFlip(),
-        transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5))
+        transforms.GaussianBlur(kernel_size=(3, 5), sigma=(0.1, 3))
     ]
 
     return transforms.Compose(augmentation)
@@ -135,3 +135,24 @@ def segmentation_to_onehot(seg, num_classes):
     one_hot = torch.FloatTensor(seg.size(0), num_classes, seg.size(2), seg.size(3)).zero_()
     one_hot.scatter_(1, seg, 1)
     return one_hot.bool()
+
+
+def otsu_thresholding(image_batch, prototypes):
+    import numpy as np
+    from skimage.filters import threshold_otsu
+    from skimage.morphology import opening, closing
+    from einops import rearrange
+
+    batch_size, _, h, w = image_batch.size()
+    image_batch = image_batch.cpu()
+
+    binary_im = torch.zeros((batch_size, h, w), device=prototypes.device)
+    for i in range(batch_size):
+        im_eroded = opening(image_batch[i,0])
+        im_closed = closing(im_eroded, np.ones((5, 5)))
+        binary_im[i] = torch.from_numpy(im_closed > threshold_otsu(im_closed)).int()
+
+    binary_im = rearrange(binary_im, 'b h w -> b (h w)')
+    prototypes = rearrange(prototypes, 'b d h w -> b d (h w)')
+    prototypes = torch.bmm(prototypes, binary_im.unsqueeze(-1)).squeeze(-1)  # N x dim
+    return prototypes

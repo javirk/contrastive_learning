@@ -8,10 +8,9 @@ from pathlib import Path
 
 from utils.common_utils import read_config
 from modules.moco.builder import ContrastiveModel
-from data.data_retriever import ContrastiveDataset
 import utils.common_utils as u
 from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp
-from evaluation_utils.kmeans_utils import save_embeddings_to_disk
+from evaluation_utils.kmeans_utils import save_embeddings_to_disk, train_kmeans, predict_trained_kmeans
 
 
 def main():
@@ -24,7 +23,7 @@ def main():
 
     model = load_pretrained_backbone(config, model, device=device)
     model = load_pretrained_aspp(config, model, device=device)
-    model, _, _, start_epoch = load_checkpoint(config, model, None, None, device=device, mode='val')
+    model, _, start_epoch = load_checkpoint(config, model, None, device=device, mode='val')
 
     model_date = config['checkpoint'].split('.')[0].split('-')[1]
     output_folder = model_date[-6:]
@@ -41,7 +40,8 @@ def main():
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=num_workers)
 
     save_embeddings_to_disk(config, dataloader, model, device=device)
-
+    train_kmeans(config, dataloader, model, device=device)
+    predict_trained_kmeans(config, dataloader, model, device=device)
 
 
 if __name__ == '__main__':
