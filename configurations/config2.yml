@@ -1,4 +1,4 @@
-num_classes: 2
+num_classes: 3
 
 # Model
 model: deeplab
@@ -56,5 +56,6 @@ val_kwargs:
   k_means:
     use_pca: True
     remove_background_cluster: True
+    n_clusters: 2
   linear:
     mean_var_normalization: True

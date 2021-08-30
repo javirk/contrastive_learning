@@ -62,8 +62,9 @@ def main():
         model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)
 
         print('Sample results...')
-        sample_results(model, dataset, config['num_classes'], config['train_kwargs']['saved_images_per_epoch'], device,
-                       writer=writer, epoch_num=epoch, debug=True, seed=567)
+        sample_results(model, dataset, config['val_kwargs']['k_means']['n_clusters'],
+                       config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
+                       debug=True, seed=567)
 
         ckpt = {'optimizer': opt.state_dict(), 'model': model.state_dict(), 'epoch': epoch + 1}
         torch.save(ckpt, ckpt_path)
