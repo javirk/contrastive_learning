@@ -96,7 +96,8 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
         prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
         prototypes = nn.functional.normalize(prototypes, dim=1)
 
-        n_clusters = (cls > 0.5).sum() + 1  # Detected biomarkers + background
+        # n_clusters = (cls > 0.5).sum() + 1  # Detected biomarkers + background
+        n_clusters = p['val_kwargs']['k_means']['n_clusters']
         prototypes = prototypes.cpu()
 
         kmeans = MiniBatchKMeans(n_clusters=n_clusters, batch_size=1000, random_state=seed)
@@ -238,7 +239,7 @@ def train_kmeans(p, val_loader, model, seed=1234, device='cpu'):
 
     # perform kmeans
     all_prototypes = all_prototypes.cpu().numpy()
-    n_clusters = p['num_classes']
+    n_clusters = p['val_kwargs']['k_means']['n_clusters']
     print('Kmeans clustering to {} clusters'.format(n_clusters))
 
     print('Starting kmeans with scikit')
@@ -268,7 +269,7 @@ def predict_trained_kmeans(p, val_loader, model, device='cpu'):
     model.eval()
     ptr = 0
     dataset_name = p[f'val_kwargs']['dataset'].lower()
-    n_clusters = p['num_classes']
+    n_clusters = p['val_kwargs']['k_means']['n_clusters']
     if p['val_kwargs']['coarse_pixels_only']:
         filename = os.path.join(p['embedding_dir'], f'embeddings_trainedkmeans_coarseonly_{dataset_name}.npy')
     else:
