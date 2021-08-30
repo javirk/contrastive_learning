@@ -52,6 +52,7 @@ def sample_results(model, dataset, num_classes, number_images, device, writer=No
 def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
     """
     Inspired from https://github.com/wvangansbeke/Unsupervised-Semantic-Segmentation
+    Train PCA + KMeans over a batch, then save the final result.
     :param p:
     :param val_loader:
     :param model:
@@ -200,7 +201,7 @@ def save_average_embeddings(p, val_loader, model, seed=1234, device='cpu'):
 @torch.no_grad()
 def train_kmeans(p, val_loader, model, seed=1234, device='cpu'):
     """
-    Train a kmeans. Basically the same function as save_average_embeddings
+    Train a kmeans over the whole dataset. Basically the same function as save_average_embeddings
     :param p:
     :param val_loader:
     :param model:
@@ -237,10 +238,10 @@ def train_kmeans(p, val_loader, model, seed=1234, device='cpu'):
 
     # perform kmeans
     all_prototypes = all_prototypes.cpu().numpy()
-    n_clusters = 3
+    n_clusters = p['num_classes']
     print('Kmeans clustering to {} clusters'.format(n_clusters))
 
-    print('Starting kmeans with scikit', 'green')
+    print('Starting kmeans with scikit')
     pca = PCA(n_components=32, whiten=True)
     all_prototypes = pca.fit_transform(all_prototypes)
     kmeans = MiniBatchKMeans(n_clusters=n_clusters, batch_size=1000, random_state=seed)
