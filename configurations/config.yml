@@ -23,7 +23,7 @@ checkpoint: None
 moco_kwargs:
    T: 0.1 # Temperature
    m: 0.999 # Momentum
-   K: 256 # Negatives
+   K: 128 # Negatives
 
 # Optimizer:
 epochs: 10
@@ -53,6 +53,7 @@ val_kwargs:
   batch_size: 8
   coarse_pixels_only: True
   dataset: retouch  # 'retouch' or 'oct_test'
+  dataset_len: 128
   k_means:
     use_pca: True  # For now, validation during training doesn't use PCA
     remove_background_cluster: True
