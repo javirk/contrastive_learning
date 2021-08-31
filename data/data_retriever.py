@@ -33,7 +33,8 @@ class SegmentationDataset(Dataset):
         File has 0=Background, 1=IRF, 2=SRF, 3="PED"
     """
 
-    def __init__(self, volume_file, segmentation_file, max_len=None, seed=1234, transform=None, only_fluid=True):
+    def __init__(self, volume_file, segmentation_file, max_len=None, seed=1234, transform=None, only_fluid=True,
+                 no_classes=True):
         self.slices = np.load(volume_file, allow_pickle=True)
         self.segmentation = np.load(segmentation_file, allow_pickle=True)
 
@@ -48,12 +49,17 @@ class SegmentationDataset(Dataset):
             self.segmentation = self.segmentation[shuffler][:max_len]
 
         # This is to have the same labels as in the OCTHDF5Dataset dataset.
-        # self.segmentation = np.where(self.segmentation == 3, 0, self.segmentation)  # Remove PED
+        self.segmentation = np.where(self.segmentation == 3, 0, self.segmentation)  # Remove PED
         # self.segmentation = np.where(self.segmentation == 2, 3, self.segmentation)  # AUX
         # self.segmentation = np.where(self.segmentation == 1, 2, self.segmentation)  # IRF to index 2
         # self.segmentation = np.where(self.segmentation == 3, 1, self.segmentation)  # SRF to index 1
 
-        self.n_classes = 4
+        if no_classes:
+            # Do not distinguish IRF and SRF
+            self.segmentation = self.segmentation.astype(bool).astype(int)
+            self.n_classes = 2
+        else:
+            self.n_classes = 3
 
         if only_fluid:
             idx_keep = (self.segmentation != 0).any(axis=(2, 3)).astype(float).nonzero()[0]

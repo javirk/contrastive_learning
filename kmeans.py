@@ -14,6 +14,7 @@ from evaluation_utils.kmeans_utils import save_embeddings_to_disk, train_kmeans,
 
 
 def main():
+    # TODO: Check if everything here works as it should, the results are not correct...
     assert config['val_kwargs']['batch_size'] == 1, 'Batch size must be 1 for validation'
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = ContrastiveModel(config)
@@ -23,7 +24,7 @@ def main():
 
     model = load_pretrained_backbone(config, model, device=device)
     model = load_pretrained_aspp(config, model, device=device)
-    model, _, start_epoch = load_checkpoint(config, model, None, device=device, mode='val')
+    model, _, start_epoch = load_checkpoint(config, model, None, device=device, mode='val', error_on_notfound=err)
 
     model_date = config['checkpoint'].split('.')[0].split('-')[1]
     output_folder = model_date[-6:]
@@ -64,9 +65,11 @@ if __name__ == '__main__':
     if FLAGS.ubelix == 0:
         data_path = Path(__file__).parents[2].joinpath('Datasets')
         num_workers = 0
+        err = False
     else:
         data_path = Path('/storage/homefs/jg20n729/OCT_Detection/Datasets')
         num_workers = 8
+        err = True
 
     root_path = Path(__file__).resolve().parents[0]
     config['use_amp'] = False
