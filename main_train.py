@@ -7,14 +7,16 @@ from pathlib import Path
 
 from utils.common_utils import read_config, prepare_run
 from modules.moco.builder import ContrastiveModel
-from data.data_retriever import ContrastiveDataset
-from utils.common_utils import get_train_transformations, get_optimizer, adjust_learning_rate, str2bool
+from data.data_retriever import ContrastiveDataset, SegmentationDataset
+from utils.common_utils import get_train_transformations, get_val_transformations, get_optimizer, adjust_learning_rate, \
+    str2bool, get_paths_validation
 from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp
-from utils.train_utils import train_epoch
+from utils.train_utils import train_epoch, validate_epoch
 from evaluation_utils.kmeans_utils import sample_results
 from modules.loss import ContrastiveLearningLoss
 from random import randint
 from time import sleep
+from utils.hungarian import Hungarian
 
 
 def main():
@@ -25,11 +27,18 @@ def main():
                                      transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
 
     augment_t = get_train_transformations()
+    validation_t = get_val_transformations()
+    volumes_path, labels_path = get_paths_validation(config, data_path)
 
     dataset = ContrastiveDataset(data_path.joinpath('ambulatorium_all.hdf5'), common_transform=common_t,
                                  augment_transform=augment_t, n_classes=config['num_classes'])
     dataloader = DataLoader(dataset, batch_size=config['train_kwargs']['batch_size'], shuffle=True,
                             num_workers=num_workers, drop_last=True)
+
+    validation_dataset = SegmentationDataset(volumes_path, labels_path, transform=validation_t, only_fluid=True,
+                                             no_classes=True, max_len=config['val_kwargs']['dataset_len'])
+    validation_loader = DataLoader(validation_dataset, batch_size=config['val_kwargs']['batch_size'], shuffle=True,
+                                   num_workers=num_workers, drop_last=True)
 
     model = ContrastiveModel(config)
     print(f"Lets use {torch.cuda.device_count()} GPUs!")
@@ -43,6 +52,7 @@ def main():
     label_criterion = nn.BCEWithLogitsLoss()
     cl_criterion = ContrastiveLearningLoss(reduction='mean')
     criterion = {'label': label_criterion, 'CL': cl_criterion}
+    criterion_validation = Hungarian()
 
     model = load_pretrained_backbone(config, model, device=device)
     model = load_pretrained_aspp(config, model, device=device)
@@ -61,10 +71,14 @@ def main():
         print('Train...')
         model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)
 
+        print('Validate...')
+        validate_epoch(config, model, validation_loader, criterion_validation, writer, epoch, device)
+
         print('Sample results...')
-        sample_results(model, dataset, config['val_kwargs']['k_means']['n_clusters'],
+        sample_results(model, validation_dataset, config['val_kwargs']['k_means']['n_clusters'],
                        config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
                        debug=True, seed=567)
+        print('Sampled!')
 
         ckpt = {'optimizer': opt.state_dict(), 'model': model.state_dict(), 'epoch': epoch + 1}
         torch.save(ckpt, ckpt_path)
@@ -103,7 +117,6 @@ if __name__ == '__main__':
 
     root_path = Path(__file__).resolve().parents[0]
     if FLAGS.mixed_precision:
-        import warnings
         raise NotImplementedError('Mixed precision is not implemented for now')
     config['use_amp'] = FLAGS.mixed_precision
 

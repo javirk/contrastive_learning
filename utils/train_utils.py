@@ -1,5 +1,7 @@
 import torch
+from sklearn.cluster import KMeans
 from utils.logs_utils import write_to_tb, update_metrics_dict
+from utils.common_utils import IoU_per_class, apply_criterion
 
 
 def train_step(config, data, model, criterion_dict, optimizer):
@@ -34,31 +36,17 @@ def train_step(config, data, model, criterion_dict, optimizer):
     return model, m, loss.item(), cl_loss.item(), pos.mean().item(), neg.mean()
 
 
-def validation_step(data, model, criterion, metrics, device):
-    # TODO: Change all this function. I don't know what validation I should have here because
-    # the predicted labels can be very different to the GT ones.
-    raise NotImplementedError
-
+def validation_step(config, data, model, kmeans, criterion, device):
     input_batch = data['images'].to(device)
-    gt = data['labels'].to(device)
+    gt = data['segmentations'].to(device)
 
-    model.forward_validation(input_batch)
+    pred, _ = model.module.forward_validation(input_batch, kmeans, keep_coarse_bg=True)
+    iou = IoU_per_class(pred, gt, config['val_kwargs']['k_means']['n_clusters'], 0.5)
+    _, mean_iou = apply_criterion(iou, criterion)  # We only need the IoU for this part
 
-    loss = criterion(out, gt).detach()
+    m = {'IoU': mean_iou}
 
-    ## Now compute the metrics and return
-    y_pred = torch.sigmoid(out).detach().cpu().numpy().ravel()
-    y_true = gt.detach().cpu().numpy().ravel()
-
-    m = {}
-    for name, metric in metrics.items():
-        if name == 'f1_score':
-            # Use a classification threshold of 0.1
-            m[f'{name}'] = metric(y_true > 0, y_pred > 0.1)
-        else:
-            m[f'{name}'] = metric(y_true.astype('uint8'), y_pred)
-
-    return m, loss.item()
+    return m
 
 
 def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_num):
@@ -81,7 +69,7 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_
 
         if i % writing_freq == (writing_freq - 1):
             batch_size = len(data['images'])
-            n_epoch = epoch_num * len(loader) + i + 1
+            n_iteration = epoch_num * len(loader) + i + 1
             epoch_loss = running_loss / writing_freq
             epoch_clloss = running_clloss / writing_freq
             epoch_pos = running_pos / writing_freq
@@ -94,7 +82,7 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_
             running_metrics['Negative'] = epoch_neg
 
             print(f'i={i}, {running_metrics}')
-            write_to_tb(writer, running_metrics.keys(), running_metrics.values(), n_epoch, phase=f'train')
+            write_to_tb(writer, running_metrics.keys(), running_metrics.values(), n_iteration, phase=f'train')
 
             running_loss = 0.
             running_clloss = 0.
@@ -102,20 +90,17 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_
             running_neg = 0.
             running_metrics = {k: 0 for k in config['metrics'].keys()}
 
-    return model, n_epoch
+    return model, n_iteration
 
 
-def validate_epoch(model, loader, criterion, metrics, writer, epoch_num, device):
+def validate_epoch(config, model, loader, criterion, writer, epoch_num, device):
     model.eval()
-    running_loss = 0.
-    running_metrics = {k: 0 for k in metrics.keys()}
+    running_metrics = {'IoU': 0.}
     for data in loader:
-        outputs = validation_step(data, model, criterion, metrics, device)
-        metrics_results, loss = outputs
+        kmeans = KMeans(n_clusters=config['val_kwargs']['k_means']['n_clusters'])
+        metrics_results = validation_step(config, data, model, kmeans, criterion, device)
 
-        running_loss += loss
         running_metrics = update_metrics_dict(running_metrics, metrics_results)
 
     running_metrics = {k: v / len(loader) for k, v in running_metrics.items()}
-    running_metrics['loss'] = running_loss / len(loader)
     write_to_tb(writer, running_metrics.keys(), running_metrics.values(), epoch_num, phase=f'val')

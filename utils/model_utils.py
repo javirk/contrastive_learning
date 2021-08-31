@@ -39,7 +39,7 @@ def load_pretrained_aspp(config, model, device='cpu'):
     return model
 
 
-def load_checkpoint(config, model, optimizer, device='cpu', mode='train'):
+def load_checkpoint(config, model, optimizer, device='cpu', mode='train', error_on_notfound=False):
     epoch = 0
     if os.path.exists('ckpts/' + config['checkpoint']):
         filename = config['checkpoint']
@@ -50,7 +50,10 @@ def load_checkpoint(config, model, optimizer, device='cpu', mode='train'):
             epoch = state_dict['epoch']
         print(f'Loaded checkpoint {filename}')
     else:
-        print('No checkpoint loaded')
+        if error_on_notfound:
+            raise FileNotFoundError('No checkpoint loaded')
+        else:
+            print('No checkpoint loaded')
 
     return model, optimizer, epoch
 

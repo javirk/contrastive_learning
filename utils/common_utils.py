@@ -9,6 +9,7 @@ import math
 import numpy as np
 import sys
 from data.data_retriever import SegmentationDataset, ContrastiveDataset
+import data.transforms_segmentation as t
 
 
 def copy_file(src, dst):
@@ -60,8 +61,23 @@ def get_train_transformations(s=1):
 
 
 def get_val_transformations():
-    augmentation = []
-    return transforms.Compose(augmentation)
+    augmentation = [t.ToTensor(), t.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])]
+    return t.Compose(augmentation)
+
+
+def get_paths_validation(p, data_path):
+    if p['val_kwargs']['dataset'] == 'retouch':
+        seg_path = data_path.joinpath('Segmentation', 'RETOUCH')
+        volumes_path = seg_path.joinpath('Spectralis_volume.npy')
+        labels_path = seg_path.joinpath('Spectralis_labels.npy')
+    elif p['val_kwargs']['dataset'] == 'oct':
+        seg_path = data_path.joinpath('Segmentation', 'retinai')
+        volumes_path = seg_path.joinpath('volume.npy')
+        labels_path = seg_path.joinpath('segmentation.npy')
+    else:
+        raise ValueError(f'{p["val_kwargs"]["dataset"]} dataset not understood')
+
+    return volumes_path, labels_path
 
 
 def get_dataset(p, data_path, mode, common_transform=None, augment_transform=None):
@@ -148,7 +164,7 @@ def otsu_thresholding(image_batch, prototypes):
 
     binary_im = torch.zeros((batch_size, h, w), device=prototypes.device)
     for i in range(batch_size):
-        im_eroded = opening(image_batch[i,0])
+        im_eroded = opening(image_batch[i, 0])
         im_closed = closing(im_eroded, np.ones((5, 5)))
         binary_im[i] = torch.from_numpy(im_closed > threshold_otsu(im_closed)).int()
 
@@ -156,3 +172,82 @@ def otsu_thresholding(image_batch, prototypes):
     prototypes = rearrange(prototypes, 'b d h w -> b d (h w)')
     prototypes = torch.bmm(prototypes, binary_im.unsqueeze(-1)).squeeze(-1)  # N x dim
     return prototypes
+
+
+def calculate_IoU(preds, labels, threshold=0.5, reduction='mean'):
+    if type(preds) == torch.Tensor:
+        preds = (preds > threshold).int()
+        labels = labels.int()
+        # Taken from: https://discuss.pytorch.org/t/understanding-different-metrics-implementations-iou/85817
+        intersection = (preds & labels).float().sum(dim=(-2, -1))  # Will be zero if Truth=0 or Prediction=0
+        union = torch.clip((preds | labels).float().sum(dim=(-2, -1)), min=1e-10)  # Will be zero if both are 0
+        iou = intersection / union
+
+        if reduction == 'none':
+            pass
+        elif reduction == 'mean':
+            iou = torch.mean(iou)
+        else:
+            raise ValueError('Unknown reduction type')
+    else:
+        preds = (preds > threshold).astype(int)
+        labels = (labels > threshold).astype(int)
+        intersection = np.sum((preds & labels), axis=(-2, -1))  # Will be zero if Truth=0 or Prediction=0
+        union = np.sum((preds | labels), axis=(-2, -1))  # Will be zero if both are 0
+
+        iou = intersection / union
+
+        if reduction == 'none':
+            pass
+        elif reduction == 'mean':
+            iou = np.nanmean(iou)
+        else:
+            raise ValueError('Unknown reduction type')
+
+    return iou
+
+
+def IoU_per_class(pred, labels, num_classes, threshold=0.5):
+    '''
+
+    :param pred: torch.Tensor([B, H, W], dtype=torch.int32). 0 in the coarse background, 1 and 2 for the cluster classes
+    This means that we have to compare 1 and 2 to the labels, which are 0 and 1. We substract 1 to preds and the rest is
+    ok (but new background is -1)
+    :param labels:
+    :param num_classes:
+    :param threshold:
+    :return:
+    '''
+    pred = pred - 1
+    iou = torch.zeros([pred.shape[0], num_classes, num_classes], dtype=torch.float)
+    for i_pred in range(num_classes):
+        pred_cls = (pred == i_pred).int()
+        for i_lab in range(num_classes):
+            label_cls = (labels == i_lab).int()
+            iou[:, i_pred, i_lab] = calculate_IoU(pred_cls, label_cls, threshold, reduction='none')
+
+    return iou
+
+def apply_criterion(iou, hungarian, predicted_batch=None):
+    bs, _, num_classes = iou.shape
+    if predicted_batch is not None:
+        pred = predicted_batch.clone()
+        pred = pred - 1
+    else:
+        pred = None
+    mean_iou = 0
+
+    for i, iou_im in enumerate(iou):
+        hungarian.calculate(iou_im, is_profit_matrix=True)  # Profit because higher IoU is better
+        mean_iou += hungarian.get_mean_potential()
+        res = hungarian.get_results()
+
+        if predicted_batch is not None:
+            # Ugly and doesn't work for more than two classes
+            pred[i, pred[i] == res[0][1]] = num_classes   # The values to an auxiliary value
+            pred[i, pred[i] == res[1][1]] = res[1][0]  # The values to the real label
+            pred[i, pred[i] == num_classes] = res[0][0]  # Aux values to the real label
+
+    if predicted_batch is not None:
+        pred[pred == -1] = 0
+    return pred, mean_iou / bs

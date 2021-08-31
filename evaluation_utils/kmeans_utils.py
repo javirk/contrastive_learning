@@ -7,12 +7,12 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.decomposition import PCA
 
 from utils.logs_utils import write_image_tb
-from utils.common_utils import segmentation_to_onehot
+from utils.common_utils import segmentation_to_onehot, IoU_per_class, apply_criterion
 
 
 
 def sample_results(model, dataset, num_classes, number_images, device, writer=None, epoch_num=None, debug=False,
-                   seed=1234):
+                   criterion=None, seed=1234):
     kmeans = KMeans(n_clusters=num_classes)  # kmeans always has num_classes
     if debug:
         num_classes = num_classes + 1
@@ -26,12 +26,20 @@ def sample_results(model, dataset, num_classes, number_images, device, writer=No
     im_idx = rng.randint(0, len(dataset), number_images)
     o = []
     input_batch = []
+    gt_batch = []
     for i in im_idx:
         input_batch.append(dataset[i]['images'].unsqueeze(0).to(device))
+        gt_batch.append(dataset[i]['segmentations'].unsqueeze(0).to(device))
 
     input_batch = torch.cat(input_batch, dim=0)
 
-    pred_batch, kmeans = model.module.forward_validation(input_batch, kmeans, debug)
+    pred_batch, _ = model.module.forward_validation(input_batch, kmeans, debug)
+
+    if criterion is not None:
+        iou = IoU_per_class(pred_batch, gt_batch, num_classes)
+        pred_batch, mean_iou = apply_criterion(iou, criterion, pred_batch)
+
+    # The rest is for visualization
     input_batch = ((input_batch + 1) / 2 * 255.).type(torch.uint8)
     pred_batch = segmentation_to_onehot(pred_batch, num_classes)
 
@@ -94,7 +102,7 @@ def save_embeddings_to_disk(p, val_loader, model, seed=1234, device='cpu'):
             coarse_idx = torch.tensor(range(features.shape[0]), device=features.device)
 
         prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
-        prototypes = nn.functional.normalize(prototypes, dim=1)
+        # prototypes = nn.functional.normalize(prototypes, dim=1)
 
         # n_clusters = (cls > 0.5).sum() + 1  # Detected biomarkers + background
         n_clusters = p['val_kwargs']['k_means']['n_clusters']
@@ -214,7 +222,7 @@ def train_kmeans(p, val_loader, model, seed=1234, device='cpu'):
     print('Train a kmeans...')
     model.eval()
     ptr = 0
-    dataset_name = p[f'val_kwargs']['dataset'].lower()
+    dataset_name = p['val_kwargs']['dataset'].lower()
 
     all_prototypes = torch.zeros((len(val_loader.sampler), 32)).to(device)
     for i, batch in enumerate(val_loader):

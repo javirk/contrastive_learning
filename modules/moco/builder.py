@@ -206,7 +206,7 @@ class ContrastiveModel(nn.Module):
         return negative_similarity, positive_similarity, class_prediction
 
     @torch.no_grad()
-    def forward_validation(self, im, kmeans, debug=False):
+    def forward_validation(self, im, kmeans, keep_coarse_bg=False):
         self.eval()
         qdict = self.model_q(im)
         features = qdict['seg']
@@ -221,9 +221,11 @@ class ContrastiveModel(nn.Module):
         coarse_idx = torch.nonzero(coarse).squeeze()
 
         prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
+        # print(prototypes.norm(dim=1).mean())
+        prototypes = nn.functional.normalize(prototypes, dim=1)
 
         prediction_kmeans = kmeans.fit_predict(prototypes.cpu().numpy())
-        if debug:
+        if keep_coarse_bg:
             prediction_kmeans += 1
         segmentation = torch.zeros(coarse.shape, dtype=torch.int32)
         segmentation[coarse_idx] = torch.tensor(prediction_kmeans)
