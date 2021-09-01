@@ -29,7 +29,10 @@ def sample_results(model, dataset, num_classes, number_images, device, writer=No
     gt_batch = []
     for i in im_idx:
         input_batch.append(dataset[i]['images'].unsqueeze(0).to(device))
-        gt_batch.append(dataset[i]['segmentations'].unsqueeze(0).to(device))
+        try:
+            gt_batch.append(dataset[i]['segmentations'].unsqueeze(0).to(device))
+        except KeyError:
+            pass
 
     input_batch = torch.cat(input_batch, dim=0)
 
