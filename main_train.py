@@ -71,7 +71,7 @@ def main():
         print('Adjusted learning rate to {:.5f}'.format(lr))
 
         print('Train...')
-        # model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)
+        model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)
 
         print('Validate...')
         validate_epoch(config, model, validation_loader, criterion_validation, writer, epoch, device)

@@ -10,7 +10,7 @@ backbone_kwargs:
 model_kwargs:
   ndim: 32
   upsample: True
-  upsample_embedding_mode: nearest
+  upsample_embedding_mode: bilinear
   use_classification_head: True
   classify_embedding: True
   pretraining: imagenet
@@ -23,7 +23,7 @@ checkpoint: None
 moco_kwargs:
    T: 0.1 # Temperature
    m: 0.999 # Momentum
-   K: 256 # Negatives
+   K: 128 # Negatives
 
 # Optimizer:
 epochs: 10
