@@ -8,7 +8,7 @@ backbone_kwargs:
   pretraining: resnet50_dilation.pth  # Filename of the pretraining weights (only backbone)
   padding_mode: zeros
 model_kwargs:
-  ndim: 64
+  ndim: 32
   upsample: True
   upsample_embedding_mode: bilinear
   use_classification_head: True
@@ -21,7 +21,7 @@ checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.1 # Temperature
+   T: 0.25 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
 
@@ -29,7 +29,7 @@ moco_kwargs:
 epochs: 10
 optimizer: sgd
 optimizer_kwargs:
-   lr: 0.01
+   lr: 0.005
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False
