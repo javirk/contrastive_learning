@@ -42,12 +42,6 @@ class SegmentationDataset(Dataset):
 
         self.transform = transform
 
-        if max_len is not None and max_len != -1:
-            np.random.seed(seed)
-            shuffler = np.random.permutation(len(self.slices))
-            self.slices = self.slices[shuffler][:max_len]
-            self.segmentation = self.segmentation[shuffler][:max_len]
-
         # This is to have the same labels as in the OCTHDF5Dataset dataset.
         self.segmentation = np.where(self.segmentation == 3, 0, self.segmentation)  # Remove PED
         # self.segmentation = np.where(self.segmentation == 2, 3, self.segmentation)  # AUX
@@ -65,6 +59,12 @@ class SegmentationDataset(Dataset):
             idx_keep = (self.segmentation != 0).any(axis=(2, 3)).astype(float).nonzero()[0]
             self.slices = self.slices[idx_keep]
             self.segmentation = self.segmentation[idx_keep]
+
+        if max_len is not None and max_len != -1:
+            np.random.seed(seed)
+            shuffler = np.random.permutation(len(self.slices))
+            self.slices = self.slices[shuffler][:max_len]
+            self.segmentation = self.segmentation[shuffler][:max_len]
 
         self.weights = self._get_weights()
         self.dataset_len = self.segmentation.shape[0]
