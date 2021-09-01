@@ -222,7 +222,7 @@ class ContrastiveModel(nn.Module):
 
         prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
         # print(prototypes.norm(dim=1).mean())
-        prototypes = nn.functional.normalize(prototypes, dim=1)
+        # prototypes = nn.functional.normalize(prototypes, dim=1)
 
         prediction_kmeans = kmeans.fit_predict(prototypes.cpu().numpy())
         if keep_coarse_bg:

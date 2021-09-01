@@ -12,7 +12,7 @@ from utils.common_utils import segmentation_to_onehot, IoU_per_class, apply_crit
 
 
 def sample_results(model, dataset, num_classes, number_images, device, writer=None, epoch_num=None, debug=False,
-                   criterion=None, seed=1234):
+                   criterion=None, seed=1234, dataset_name='sampling'):
     kmeans = KMeans(n_clusters=num_classes)  # kmeans always has num_classes
     if debug:
         num_classes = num_classes + 1
@@ -51,7 +51,7 @@ def sample_results(model, dataset, num_classes, number_images, device, writer=No
 
     if writer is not None:
         assert epoch_num is not None, 'If a writer is passed, epoch_num is mandatory'
-        write_image_tb(writer, o, epoch_num, 'Segmentation')
+        write_image_tb(writer, o, epoch_num, f'Segmentation {dataset_name}')
     else:
         return o, pred_batch, input_batch
 
