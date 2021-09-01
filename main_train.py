@@ -32,9 +32,11 @@ def main():
 
     dataset = ContrastiveDataset(data_path.joinpath('ambulatorium_all.hdf5'), common_transform=common_t,
                                  augment_transform=augment_t, n_classes=config['num_classes'])
+    trainsetlen = int(0.95 * len(dataset))
+    trainset, valset = torch.utils.data.random_split(dataset, [trainsetlen, len(dataset) - trainsetlen])
     # torch.manual_seed(1)
     # torch.cuda.manual_seed(1)
-    dataloader = DataLoader(dataset, batch_size=config['train_kwargs']['batch_size'], shuffle=True,
+    dataloader = DataLoader(trainset, batch_size=config['train_kwargs']['batch_size'], shuffle=True,
                             num_workers=num_workers, drop_last=True)
 
     validation_dataset = SegmentationDataset(volumes_path, labels_path, transform=validation_t, only_fluid=True,
@@ -81,7 +83,11 @@ def main():
                        config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
                        debug=True, seed=567, dataset_name='test')
 
-        sample_results(model, dataset, config['val_kwargs']['k_means']['n_clusters'],
+        sample_results(model, valset, config['val_kwargs']['k_means']['n_clusters'],
+                       config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
+                       debug=True, seed=567, dataset_name='validation')
+
+        sample_results(model, trainset, config['val_kwargs']['k_means']['n_clusters'],
                        config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
                        debug=True, seed=567, dataset_name='train')
         print('Sampled!')
