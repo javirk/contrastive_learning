@@ -35,7 +35,7 @@
 
 # For array jobs
 # Array job containing 100 tasks, run max 10 tasks at the same  time
-#SBATCH --array=1-4%2
+#SBATCH --array=1-4%4
 
 # Main Python code below this line
 python ./main_train.py -c configurations/config${SLURM_ARRAY_TASK_ID}.yml -mp False
