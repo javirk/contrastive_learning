@@ -42,8 +42,7 @@ class ContrastiveSegmentationModel(nn.Module):
         if self.classify_embedding:
             cl_embedding = self.forward_embeddings(x)
             if self.upsample:
-                cl_embedding = F.interpolate(cl_embedding, size=input_shape, mode=self.upsample_embedding_mode,
-                                             align_corners=False)
+                cl_embedding = F.interpolate(cl_embedding, size=input_shape, mode=self.upsample_embedding_mode)
             return_dict['cls_emb'] = cl_embedding
 
         embedding = self.decoder(x)  # ASPP + Conv 1x1

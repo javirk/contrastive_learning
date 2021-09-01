@@ -9,7 +9,7 @@ from pathlib import Path
 from utils.common_utils import read_config
 from modules.moco.builder import ContrastiveModel
 import utils.common_utils as u
-from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp
+from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp, overwrite_checkpoint
 from evaluation_utils.kmeans_utils import save_embeddings_to_disk, train_kmeans, predict_trained_kmeans
 
 
@@ -74,8 +74,6 @@ if __name__ == '__main__':
     root_path = Path(__file__).resolve().parents[0]
     config['use_amp'] = False
 
-    if 'TL_' in FLAGS.config and config['checkpoint'] == 'None':
-        # This only composes the checkpoint filename
-        config['checkpoint'] = FLAGS.config.split('/')[-2][3:] + '.pth'
+    overwrite_checkpoint(config, FLAGS.config)
 
     main()
