@@ -8,7 +8,7 @@ backbone_kwargs:
   pretraining: resnet50_dilation.pth  # Filename of the pretraining weights (only backbone)
   padding_mode: zeros
 model_kwargs:
-  ndim: 32
+  ndim: 64
   upsample: True
   upsample_embedding_mode: bilinear
   use_classification_head: True

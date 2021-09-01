@@ -36,13 +36,16 @@ def main():
     trainset, valset = torch.utils.data.random_split(dataset, [trainsetlen, len(dataset) - trainsetlen])
     # torch.manual_seed(1)
     # torch.cuda.manual_seed(1)
-    dataloader = DataLoader(trainset, batch_size=config['train_kwargs']['batch_size'], shuffle=True,
-                            num_workers=num_workers, drop_last=True)
+    train_loader = DataLoader(trainset, batch_size=config['train_kwargs']['batch_size'], shuffle=True,
+                              num_workers=num_workers, drop_last=True)
 
-    validation_dataset = SegmentationDataset(volumes_path, labels_path, transform=validation_t, only_fluid=True,
-                                             no_classes=True, max_len=config['val_kwargs']['dataset_len'])
-    validation_loader = DataLoader(validation_dataset, batch_size=config['val_kwargs']['batch_size'], shuffle=True,
-                                   num_workers=num_workers, drop_last=True)
+    val_loader = DataLoader(trainset, batch_size=config['val_kwargs']['batch_size'], shuffle=False,
+                              num_workers=num_workers, drop_last=True)
+
+    testing_dataset = SegmentationDataset(volumes_path, labels_path, transform=validation_t, only_fluid=True,
+                                          no_classes=True, max_len=config['val_kwargs']['dataset_len'])
+    testing_loader = DataLoader(testing_dataset, batch_size=config['val_kwargs']['batch_size'], shuffle=True,
+                                num_workers=num_workers, drop_last=True)
 
     model = ContrastiveModel(config)
     print(f"Lets use {torch.cuda.device_count()} GPUs!")
@@ -73,15 +76,15 @@ def main():
         print('Adjusted learning rate to {:.5f}'.format(lr))
 
         print('Train...')
-        model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)
+        model, _ = train_epoch(config, model, train_loader, criterion, opt, writer, epoch)
 
         print('Validate...')
-        validate_epoch(config, model, validation_loader, criterion_validation, writer, epoch, device)
+        validate_epoch(config, model, testing_loader, criterion_validation, writer, epoch, device)
 
         print('Sample results...')
-        sample_results(model, validation_dataset, config['val_kwargs']['k_means']['n_clusters'],
+        sample_results(model, testing_dataset, config['val_kwargs']['k_means']['n_clusters'],
                        config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
-                       debug=True, seed=567, dataset_name='test')
+                       debug=True, dataset_name='test')
 
         sample_results(model, valset, config['val_kwargs']['k_means']['n_clusters'],
                        config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
