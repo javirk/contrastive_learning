@@ -41,8 +41,8 @@ def validation_step(config, data, model, kmeans, criterion, device):
     gt = data['segmentations']  # The predictions will be later on CPU because of the kmeans.
 
     pred, _ = model.module.forward_validation(input_batch, kmeans, keep_coarse_bg=True)
-    iou = IoU_per_class(pred, gt, config['val_kwargs']['k_means']['n_clusters'], 0.5)
-    _, mean_iou = apply_criterion(iou, criterion)  # We only need the IoU for this part
+    iou_class = IoU_per_class(pred, gt, config['val_kwargs']['k_means']['n_clusters'], 0.5)
+    _, mean_iou = apply_criterion(iou_class, criterion)  # We only need the IoU for this part
 
     m = {'IoU': mean_iou}
 

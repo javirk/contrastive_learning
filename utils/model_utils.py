@@ -47,7 +47,7 @@ def load_checkpoint(config, model, optimizer, device='cpu', mode='train', error_
         model.load_state_dict(state_dict['model'])
         if mode == 'train':
             optimizer.load_state_dict(state_dict['optimizer'])
-            epoch = state_dict['epoch']
+            # epoch = state_dict['epoch']
         print(f'Loaded checkpoint {filename}')
     else:
         if error_on_notfound:
@@ -82,3 +82,10 @@ def remove_module_from_dict(state_dict):
         name = k[7:]  # remove `module.`
         new_state_dict[name] = v
     return new_state_dict
+
+
+def overwrite_checkpoint(p, config_path):
+    if 'configurations' not in config_path and p['checkpoint'] == 'None':
+        # This only composes the checkpoint filename
+        p['checkpoint'] = config_path.split('/')[-2][3:] + '.pth'
+    return p

@@ -70,7 +70,7 @@ def get_paths_validation(p, data_path):
         seg_path = data_path.joinpath('Segmentation', 'RETOUCH')
         volumes_path = seg_path.joinpath('Spectralis_volume.npy')
         labels_path = seg_path.joinpath('Spectralis_labels.npy')
-    elif p['val_kwargs']['dataset'] == 'oct':
+    elif p['val_kwargs']['dataset'] == 'oct_test':
         seg_path = data_path.joinpath('Segmentation', 'retinai')
         volumes_path = seg_path.joinpath('volume.npy')
         labels_path = seg_path.joinpath('segmentation.npy')
@@ -239,7 +239,7 @@ def apply_criterion(iou, hungarian, predicted_batch=None):
 
     for i, iou_im in enumerate(iou):
         hungarian.calculate(iou_im, is_profit_matrix=True)  # Profit because higher IoU is better
-        mean_iou += hungarian.get_mean_potential()
+        mean_iou += get_potential_fluid(iou_im, hungarian)
         res = hungarian.get_results()
 
         if predicted_batch is not None:
@@ -251,3 +251,12 @@ def apply_criterion(iou, hungarian, predicted_batch=None):
     if predicted_batch is not None:
         pred[pred == -1] = 0
     return pred, mean_iou / bs
+
+def get_potential_fluid(iou_matrix, hungarian):
+    """Fluid is always in the second column (this doesn't work for more than two classes). hungarian.get_results()
+    returns the idx of the selected values in Iou_matrix, so we iterate over them to find which one has information
+    in the second column."""
+    for idx in hungarian.get_results():
+        if idx[-1] == 1:
+            break
+    return iou_matrix[idx]

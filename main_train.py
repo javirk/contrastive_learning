@@ -10,7 +10,7 @@ from modules.moco.builder import ContrastiveModel
 from data.data_retriever import ContrastiveDataset, SegmentationDataset
 from utils.common_utils import get_train_transformations, get_val_transformations, get_optimizer, adjust_learning_rate, \
     str2bool, get_paths_validation
-from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp
+from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp, overwrite_checkpoint
 from utils.train_utils import train_epoch, validate_epoch
 from evaluation_utils.kmeans_utils import sample_results
 from modules.loss import ContrastiveLearningLoss
@@ -37,7 +37,7 @@ def main():
 
     validation_dataset = SegmentationDataset(volumes_path, labels_path, transform=validation_t, only_fluid=True,
                                              no_classes=True, max_len=config['val_kwargs']['dataset_len'])
-    validation_loader = DataLoader(validation_dataset, batch_size=config['val_kwargs']['batch_size'], shuffle=True,
+    validation_loader = DataLoader(validation_dataset, batch_size=config['val_kwargs']['batch_size'], shuffle=False,
                                    num_workers=num_workers, drop_last=True)
 
     model = ContrastiveModel(config)
@@ -119,5 +119,6 @@ if __name__ == '__main__':
     if FLAGS.mixed_precision:
         raise NotImplementedError('Mixed precision is not implemented for now')
     config['use_amp'] = FLAGS.mixed_precision
+    overwrite_checkpoint(config, FLAGS.config)
 
     main()
