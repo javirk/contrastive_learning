@@ -32,12 +32,14 @@ def main():
 
     dataset = ContrastiveDataset(data_path.joinpath('ambulatorium_all.hdf5'), common_transform=common_t,
                                  augment_transform=augment_t, n_classes=config['num_classes'])
+    # torch.manual_seed(1)
+    # torch.cuda.manual_seed(1)
     dataloader = DataLoader(dataset, batch_size=config['train_kwargs']['batch_size'], shuffle=True,
                             num_workers=num_workers, drop_last=True)
 
     validation_dataset = SegmentationDataset(volumes_path, labels_path, transform=validation_t, only_fluid=True,
                                              no_classes=True, max_len=config['val_kwargs']['dataset_len'])
-    validation_loader = DataLoader(validation_dataset, batch_size=config['val_kwargs']['batch_size'], shuffle=False,
+    validation_loader = DataLoader(validation_dataset, batch_size=config['val_kwargs']['batch_size'], shuffle=True,
                                    num_workers=num_workers, drop_last=True)
 
     model = ContrastiveModel(config)
@@ -69,7 +71,7 @@ def main():
         print('Adjusted learning rate to {:.5f}'.format(lr))
 
         print('Train...')
-        model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)
+        # model, _ = train_epoch(config, model, dataloader, criterion, opt, writer, epoch)
 
         print('Validate...')
         validate_epoch(config, model, validation_loader, criterion_validation, writer, epoch, device)
@@ -77,7 +79,11 @@ def main():
         print('Sample results...')
         sample_results(model, validation_dataset, config['val_kwargs']['k_means']['n_clusters'],
                        config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
-                       debug=True, seed=567)
+                       debug=True, seed=567, dataset_name='test')
+
+        sample_results(model, dataset, config['val_kwargs']['k_means']['n_clusters'],
+                       config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
+                       debug=True, seed=567, dataset_name='train')
         print('Sampled!')
 
         ckpt = {'optimizer': opt.state_dict(), 'model': model.state_dict(), 'epoch': epoch + 1}

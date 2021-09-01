@@ -45,7 +45,7 @@ def validation_step(config, data, model, kmeans, criterion, device):
     _, mean_iou = apply_criterion(iou_class, criterion)  # We only need the IoU for this part
 
     m = {'IoU': mean_iou}
-
+    print(m)
     return m
 
 

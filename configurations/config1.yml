@@ -50,9 +50,9 @@ train_kwargs:
 
 # Validation:
 val_kwargs:
-  batch_size: 8
+  batch_size: 4
   coarse_pixels_only: True
-  dataset: retouch  # 'retouch' or 'oct_test'
+  dataset: oct_test  # 'retouch' or 'oct_test'
   dataset_len: 128
   k_means:
     use_pca: True  # For now, validation during training doesn't use PCA
