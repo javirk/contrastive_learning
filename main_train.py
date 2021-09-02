@@ -10,7 +10,8 @@ from modules.moco.builder import ContrastiveModel
 from data.data_retriever import ContrastiveDataset, SegmentationDataset
 from utils.common_utils import get_train_transformations, get_val_transformations, get_optimizer, adjust_learning_rate, \
     str2bool, get_paths_validation
-from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp, overwrite_checkpoint
+from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp, overwrite_checkpoint, \
+    adjust_temperature
 from utils.train_utils import train_epoch, validate_epoch
 from evaluation_utils.kmeans_utils import sample_results
 from modules.loss import ContrastiveLearningLoss
@@ -74,6 +75,8 @@ def main():
     for epoch in range(start_epoch, config['epochs']):
         lr = adjust_learning_rate(config, opt, epoch)
         print('Adjusted learning rate to {:.5f}'.format(lr))
+        T = adjust_temperature(config, model, epoch)
+        print('Adjusted temperature to {:.5f}'.format(T))
 
         print('Train...')
         model, _ = train_epoch(config, model, train_loader, criterion, opt, writer, epoch)
