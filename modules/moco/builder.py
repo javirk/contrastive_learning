@@ -243,6 +243,9 @@ class ContrastiveModel(nn.Module):
         for param in self.model_k.backbone.parameters():
             param.requires_grad = False
 
+    def set_temperature(self, new_temp):
+        self.T = new_temp
+
 
 # utils
 @torch.no_grad()

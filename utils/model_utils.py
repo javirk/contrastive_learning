@@ -89,3 +89,33 @@ def overwrite_checkpoint(p, config_path):
         # This only composes the checkpoint filename
         p['checkpoint'] = config_path.split('/')[-2][3:] + '.pth'
     return p
+
+
+def adjust_temperature(p, model, epoch):
+    """
+    Temperature is raised exponentially
+    :param p: configuration.
+    :param model: MOCO model. Current temperature is inside
+    :param epoch: current epoch (int)
+    :return: new temperature (float)
+    """
+    T = model.module.T
+    rate = p['moco_kwargs']['T_scheduler_rate']
+
+    if p['moco_kwargs']['T_scheduler'] == 'poly_increase':
+        T = T * pow(1 + epoch / p['epochs'], rate)
+        T = 1 if T > 1 else T
+
+    elif p['moco_kwargs']['T_scheduler'] == 'poly_decrease':
+        T = T * pow(1 - epoch / p['epochs'], rate)
+        T = 1 if T > 1 else T
+
+    elif p['moco_kwargs']['T_scheduler'] == 'constant':
+        pass
+
+    else:
+        raise ValueError(f'Temperature scheduler {p["moco_kwargs"]["T_scheduler"]} not recognised')
+
+    model.module.set_temperature(T)
+
+    return T

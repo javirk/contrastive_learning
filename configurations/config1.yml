@@ -21,9 +21,11 @@ checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.15 # Temperature
+   T: 0.25 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
+   T_scheduler: poly_decrease # poly_increase, poly_decrease or constant
+   T_scheduler_rate: 0.25
 
 # Optimizer:
 epochs: 10
