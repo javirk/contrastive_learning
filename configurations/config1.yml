@@ -24,11 +24,11 @@ moco_kwargs:
    T: 0.05 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
-   T_scheduler: poly_increase # poly_increase, poly_decrease or constant
+   T_scheduler: poly_decrease # poly_increase, poly_decrease or constant
    T_scheduler_rate: 0.25
 
 # Optimizer:
-epochs: 10
+epochs: 30
 optimizer: sgd
 optimizer_kwargs:
    lr: 0.01
