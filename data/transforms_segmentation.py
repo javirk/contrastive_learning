@@ -120,5 +120,5 @@ class CLAHE(object):
     def __call__(self, img: np.ndarray, seg: np.ndarray):
         if np.argmin(img.shape) == 0:
             img = np.moveaxis(img, -1, 0)
-        return exposure.equalize_adapthist(img)
+        return exposure.equalize_adapthist(img), seg
 
