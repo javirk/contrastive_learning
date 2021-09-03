@@ -94,7 +94,7 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_
 
 def validate_epoch(config, model, loader, criterion, writer, epoch_num, device):
     model.eval()
-    running_metrics = {'IoU': 0.}
+    running_metrics = {'IoU_fluid': 0., 'IoU_bg': 0.}
     for data in loader:
         kmeans = KMeans(n_clusters=config['val_kwargs']['k_means']['n_clusters'])
         metrics_results = validation_step(config, data, model, kmeans, criterion, device)
