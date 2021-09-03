@@ -62,12 +62,11 @@ def train_epoch(config, model, loader, criterion_dict, optimizer, writer, epoch_
 
         running_loss += loss
         running_clloss += cl_loss
-        running_pos += positive_sim
-        running_neg += negative_sim
+        running_pos += positive_sim * model.module.T  # So it makes sense to compare similarities
+        running_neg += negative_sim * model.module.T
         running_metrics = update_metrics_dict(running_metrics, metrics_results)
 
         if i % writing_freq == (writing_freq - 1):
-            batch_size = len(data['images'])
             n_iteration = epoch_num * len(loader) + i + 1
             epoch_loss = running_loss / writing_freq
             epoch_clloss = running_clloss / writing_freq

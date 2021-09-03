@@ -25,7 +25,7 @@ moco_kwargs:
    m: 0.999 # Momentum
    K: 128 # Negatives
    T_scheduler: poly_increase # poly_increase, poly_decrease or constant
-   T_scheduler_rate: 0.25
+   T_scheduler_rate: 0.15
 
 # Optimizer:
 epochs: 30
@@ -55,7 +55,7 @@ val_kwargs:
   batch_size: 4
   coarse_pixels_only: True
   dataset: oct_test  # 'retouch' or 'oct_test'
-  dataset_len: 128
+  dataset_len: 256
   k_means:
     use_pca: True  # For now, validation during training doesn't use PCA
     remove_background_cluster: True
