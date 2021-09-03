@@ -235,11 +235,13 @@ def apply_criterion(iou, hungarian, predicted_batch=None):
         pred = pred - 1
     else:
         pred = None
-    mean_iou = 0
+    mean_iou_fluid = 0
+    mean_iou_bg = 0
 
     for i, iou_im in enumerate(iou):
         hungarian.calculate(iou_im, is_profit_matrix=True)  # Profit because higher IoU is better
-        mean_iou += get_potential_fluid(iou_im, hungarian)
+        mean_iou_fluid += get_potential_fluid(iou_im, hungarian)
+        mean_iou_bg += get_potential_bg(iou_im, hungarian)
         res = hungarian.get_results()
 
         if predicted_batch is not None:
@@ -250,13 +252,22 @@ def apply_criterion(iou, hungarian, predicted_batch=None):
 
     if predicted_batch is not None:
         pred[pred == -1] = 0
-    return pred, mean_iou / bs
+    return pred, mean_iou_fluid / bs, mean_iou_bg / bs
 
 def get_potential_fluid(iou_matrix, hungarian):
     """Fluid is always in the second column (this doesn't work for more than two classes). hungarian.get_results()
     returns the idx of the selected values in Iou_matrix, so we iterate over them to find which one has information
     in the second column."""
     for idx in hungarian.get_results():
-        if idx[-1] == 1:
+        if idx[1] == 1:
+            break
+    return iou_matrix[idx]
+
+def get_potential_bg(iou_matrix, hungarian):
+    """Background is always in the first column (this doesn't work for more than two classes). hungarian.get_results()
+    returns the idx of the selected values in Iou_matrix, so we iterate over them to find which one has information
+    in the second column."""
+    for idx in hungarian.get_results():
+        if idx[0] == 1:
             break
     return iou_matrix[idx]

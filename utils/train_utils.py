@@ -42,10 +42,9 @@ def validation_step(config, data, model, kmeans, criterion, device):
 
     pred, _ = model.module.forward_validation(input_batch, kmeans, keep_coarse_bg=True)
     iou_class = IoU_per_class(pred, gt, config['val_kwargs']['k_means']['n_clusters'], 0.5)
-    _, mean_iou = apply_criterion(iou_class, criterion)  # We only need the IoU for this part
+    _, mean_iou_fluid, mean_iou_bg = apply_criterion(iou_class, criterion)  # We only need the IoU for this part
 
-    m = {'IoU': mean_iou}
-    print(m)
+    m = {'IoU_fluid': mean_iou_fluid, 'IoU_bg': mean_iou_bg}
     return m
 
 
