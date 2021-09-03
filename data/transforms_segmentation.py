@@ -7,6 +7,7 @@ import random
 import torch
 from torchvision import transforms as T
 from torchvision.transforms import functional as F
+from skimage import exposure
 
 
 def pad_if_smaller(img, size, fill=0):
@@ -114,3 +115,10 @@ class Resize:
         resize_seg = F.resize(seg.unsqueeze(0), size=self._size, interpolation=F.InterpolationMode.NEAREST)
 
         return resize_image.squeeze(), resize_seg.squeeze()
+
+class CLAHE(object):
+    def __call__(self, img: np.ndarray, seg: np.ndarray):
+        if np.argmin(img.shape) == 0:
+            img = np.moveaxis(img, -1, 0)
+        return exposure.equalize_adapthist(img)
+
