@@ -34,7 +34,7 @@ class SegmentationDataset(Dataset):
     """
 
     def __init__(self, volume_file, segmentation_file, max_len=None, seed=1234, transform=None, only_fluid=True,
-                 no_classes=True):
+                 no_classes=True, remove_small_segmentations=True):
         self.slices = np.load(volume_file, allow_pickle=True)
         self.segmentation = np.load(segmentation_file, allow_pickle=True)
 
@@ -57,6 +57,12 @@ class SegmentationDataset(Dataset):
 
         if only_fluid:
             idx_keep = (self.segmentation != 0).any(axis=(2, 3)).astype(float).nonzero()[0]
+            self.slices = self.slices[idx_keep]
+            self.segmentation = self.segmentation[idx_keep]
+
+        if remove_small_segmentations:
+            # 50 is the size of the mask. Any segmentation under 50 pixels (total per image) is discarded
+            idx_keep = (self.segmentation.sum(axis=(2,3)) > 50).astype(float).nonzero()[0]
             self.slices = self.slices[idx_keep]
             self.segmentation = self.segmentation[idx_keep]
 
