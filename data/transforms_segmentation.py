@@ -98,3 +98,19 @@ class RemoveWhitelines(object):
     def __call__(self, image, target):
         target = torch.where(target == 255, 0, target)
         return image, target
+
+
+class Resize:
+    def __init__(self, size):
+        from collections.abc import Iterable
+        assert isinstance(size, int) or (isinstance(size, Iterable) and len(size) == 2)
+        if isinstance(size, int):
+            self._size = (size, size)
+        else:
+            self._size = size
+
+    def __call__(self, img: torch.tensor, seg: torch.tensor):
+        resize_image = F.resize(img.unsqueeze(0), size=self._size, interpolation=F.InterpolationMode.BILINEAR)
+        resize_seg = F.resize(seg.unsqueeze(0), size=self._size, interpolation=F.InterpolationMode.NEAREST)
+
+        return resize_image.squeeze(), resize_seg.squeeze()

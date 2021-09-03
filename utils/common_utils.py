@@ -61,7 +61,7 @@ def get_train_transformations(s=1):
 
 
 def get_val_transformations():
-    augmentation = [t.ToTensor(), t.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])]
+    augmentation = [t.ToTensor(), t.Resize(512), t.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])]
     return t.Compose(augmentation)
 
 

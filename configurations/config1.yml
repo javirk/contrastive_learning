@@ -5,7 +5,7 @@ model: deeplab
 backbone: resnet50
 backbone_kwargs:
   dilated: True
-  pretraining: resnet50_dilation.pth  # Filename of the pretraining weights (only backbone)
+  pretraining: resnet50_dilation_e10.pth  # Filename of the pretraining weights (only backbone)
   padding_mode: zeros
 model_kwargs:
   ndim: 32
@@ -24,7 +24,7 @@ moco_kwargs:
    T: 0.05 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
-   T_scheduler: poly_decrease # poly_increase, poly_decrease or constant
+   T_scheduler: poly_increase # poly_increase, poly_decrease or constant
    T_scheduler_rate: 0.25
 
 # Optimizer:
@@ -35,7 +35,7 @@ optimizer_kwargs:
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False
-scheduler: poly
+scheduler: constant
 
 # Loss
 loss_kwargs:

@@ -7,12 +7,13 @@ from pathlib import Path
 
 from utils.common_utils import read_config, prepare_run
 from modules.moco.builder import ContrastiveModel
-from data.data_retriever import ContrastiveDataset, SegmentationDataset
+from data.data_retriever import ContrastiveDataset, SegmentationDataset, Resize
 from utils.common_utils import get_train_transformations, get_val_transformations, get_optimizer, adjust_learning_rate, \
     str2bool, get_paths_validation
 from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp, overwrite_checkpoint, \
     adjust_temperature
 from utils.train_utils import train_epoch, validate_epoch
+from utils.logs_utils import write_to_tb
 from evaluation_utils.kmeans_utils import sample_results
 from modules.loss import ContrastiveLearningLoss
 from random import randint
@@ -24,8 +25,8 @@ def main():
     sleep(randint(1, 50))  # This is for the SLURM array jobs
     writer, device, current_time = prepare_run(root_path, FLAGS.config)
     config['device'] = device
-    common_t = transforms.Compose([transforms.ToTensor(), transforms.RandomHorizontalFlip(),
-                                     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
+    common_t = transforms.Compose([Resize(512), transforms.ToTensor(), transforms.RandomHorizontalFlip(),
+                                   transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])])
 
     augment_t = get_train_transformations()
     validation_t = get_val_transformations()
@@ -41,7 +42,7 @@ def main():
                               num_workers=num_workers, drop_last=True)
 
     val_loader = DataLoader(trainset, batch_size=config['val_kwargs']['batch_size'], shuffle=False,
-                              num_workers=num_workers, drop_last=True)
+                            num_workers=num_workers, drop_last=True)
 
     testing_dataset = SegmentationDataset(volumes_path, labels_path, transform=validation_t, only_fluid=True,
                                           no_classes=True, max_len=config['val_kwargs']['dataset_len'])
@@ -75,14 +76,16 @@ def main():
     for epoch in range(start_epoch, config['epochs']):
         lr = adjust_learning_rate(config, opt, epoch)
         print('Adjusted learning rate to {:.5f}'.format(lr))
+
         T = adjust_temperature(config, model, epoch)
         print('Adjusted temperature to {:.5f}'.format(T))
+        write_to_tb(writer, ['temperature'], [T], epoch, phase=f'train')
 
         print('Train...')
-        model, _ = train_epoch(config, model, train_loader, criterion, opt, writer, epoch)
+        # model, _ = train_epoch(config, model, train_loader, criterion, opt, writer, epoch)
 
         print('Validate...')
-        validate_epoch(config, model, testing_loader, criterion_validation, writer, epoch, device)
+        # validate_epoch(config, model, testing_loader, criterion_validation, writer, epoch, device)
 
         print('Sample results...')
         sample_results(model, testing_dataset, config['val_kwargs']['k_means']['n_clusters'],
@@ -100,7 +103,6 @@ def main():
 
         ckpt = {'optimizer': opt.state_dict(), 'model': model.state_dict(), 'epoch': epoch + 1}
         torch.save(ckpt, ckpt_path)
-
 
 
 if __name__ == '__main__':
