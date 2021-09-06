@@ -28,7 +28,7 @@ moco_kwargs:
    T_scheduler_rate: 0.05
 
 # Optimizer:
-epochs: 30
+epochs: 100
 optimizer: sgd
 optimizer_kwargs:
    lr: 0.01
