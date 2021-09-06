@@ -5,10 +5,10 @@ model: deeplab
 backbone: resnet50
 backbone_kwargs:
   dilated: True
-  pretraining: resnet50_dilation.pth  # Filename of the pretraining weights (only backbone)
+  pretraining: resnet50_dilation_e10.pth  # Filename of the pretraining weights (only backbone)
   padding_mode: zeros
 model_kwargs:
-  ndim: 64
+  ndim: 32
   upsample: True
   upsample_embedding_mode: bilinear
   use_classification_head: True
@@ -21,19 +21,21 @@ checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.1 # Temperature
+   T: 0.5 # Temperature
    m: 0.999 # Momentum
-   K: 256 # Negatives
+   K: 128 # Negatives
+   T_scheduler: poly_decrease # poly_increase, poly_decrease or constant
+   T_scheduler_rate: 0.05
 
 # Optimizer:
-epochs: 10
+epochs: 30
 optimizer: sgd
 optimizer_kwargs:
    lr: 0.01
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False
-scheduler: poly
+scheduler: constant
 
 # Loss
 loss_kwargs:
@@ -53,7 +55,7 @@ val_kwargs:
   batch_size: 4
   coarse_pixels_only: True
   dataset: oct_test  # 'retouch' or 'oct_test'
-  dataset_len: 128
+  dataset_len: 256
   k_means:
     use_pca: True  # For now, validation during training doesn't use PCA
     remove_background_cluster: True

@@ -25,7 +25,7 @@ moco_kwargs:
    m: 0.999 # Momentum
    K: 128 # Negatives
    T_scheduler: poly_increase # poly_increase, poly_decrease or constant
-   T_scheduler_rate: 0.15
+   T_scheduler_rate: 0.05
 
 # Optimizer:
 epochs: 30
