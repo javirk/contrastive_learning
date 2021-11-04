@@ -40,7 +40,9 @@ def validation_step(config, data, model, kmeans, criterion, device):
     input_batch = data['images'].to(device)
     gt = data['segmentations']  # The predictions will be later on CPU because of the kmeans.
 
-    pred, _ = model.module.forward_validation(input_batch, kmeans, keep_coarse_bg=True)
+    with torch.inference_mode():
+        pred, _ = model.module.forward_validation(input_batch, kmeans, keep_coarse_bg=True)
+
     iou_class = IoU_per_class(pred, gt, config['val_kwargs']['k_means']['n_clusters'], 0.5)
     _, mean_iou_fluid, mean_iou_bg = apply_criterion(iou_class, criterion)  # We only need the IoU for this part
 

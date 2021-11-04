@@ -104,12 +104,12 @@ def adjust_temperature(p, model, epoch):
 
     if p['moco_kwargs']['T_scheduler'] == 'poly_increase':
         T = T * pow(1 + epoch / p['epochs'], rate)
-        T = 1 if T > 1 else T
+        T = min(T, 1)
 
     elif p['moco_kwargs']['T_scheduler'] == 'poly_decrease':
         T = T * pow(1 - epoch / p['epochs'], rate)
-        T = 1 if T > 1 else T
-        T = 0.05 if T < 0.05 else T
+        T = min(T, 1)
+        T = max(0.05, T)
 
     elif p['moco_kwargs']['T_scheduler'] == 'constant':
         pass

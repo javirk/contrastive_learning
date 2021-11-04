@@ -135,7 +135,7 @@ class ContrastiveDataset(Dataset):
 
     def _remove_unused_labels(self):
         self.label_set = self.label_set[:, :3]  # Only until IRF
-        self.label_set[:, 0] = np.logical_not(np.logical_or(self.label_set[:, 1],self.label_set[:, 2])).astype(int)
+        self.label_set[:, 0] = np.logical_not(np.logical_or(self.label_set[:, 1], self.label_set[:, 2])).astype(int)
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):

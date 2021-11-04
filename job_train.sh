@@ -12,7 +12,7 @@
 #SBATCH --job-name="contrastive"
 
 # Partition
-#SBATCH --partition=gpu-invest # all, gpu, phi, long
+#SBATCH --partition=gpu # all, gpu, phi, long
 
 # Runtime and memory
 #SBATCH --time=24:00:00    # days-HH:MM:SS
@@ -26,7 +26,7 @@
 ##SBATCH --ntasks-per-node=1
 
 # on gpu partition
-#SBATCH --gres=gpu:rtx3090:2
+#SBATCH --gres=gpu:gtx1080ti:1
 ##SBATCH --nodelist=gnode13
 
 # Set the current working directory.
@@ -38,4 +38,4 @@
 ##SBATCH --array=1-100%10
 
 # Main Python code below this line
-python ./main_train.py -c configurations/config1.yml -mp False
+python ./main_train.py -c configurations/config.yml -mp False

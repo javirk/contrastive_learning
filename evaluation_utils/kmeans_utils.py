@@ -36,7 +36,8 @@ def sample_results(model, dataset, num_classes, number_images, device, writer=No
 
     input_batch = torch.cat(input_batch, dim=0)
 
-    pred_batch, _ = model.module.forward_validation(input_batch, kmeans, debug)
+    with torch.inference_mode():
+        pred_batch, _ = model.module.forward_validation(input_batch, kmeans, debug)
 
     if criterion is not None:
         iou = IoU_per_class(pred_batch, gt_batch, num_classes)

@@ -22,7 +22,7 @@ from utils.hungarian import Hungarian
 
 
 def main():
-    sleep(randint(1, 50))  # This is for the SLURM array jobs
+    # sleep(randint(1, 50))  # This is for the SLURM array jobs TODO
     writer, device, current_time = prepare_run(root_path, FLAGS.config)
     config['device'] = device
     common_t = transforms.Compose([Resize(512), transforms.ToTensor(), transforms.RandomHorizontalFlip(),
@@ -35,7 +35,9 @@ def main():
     dataset = ContrastiveDataset(data_path.joinpath('ambulatorium_all.hdf5'), common_transform=common_t,
                                  augment_transform=augment_t, n_classes=config['num_classes'])
     trainsetlen = int(0.95 * len(dataset))
-    trainset, valset = torch.utils.data.random_split(dataset, [trainsetlen, len(dataset) - trainsetlen])
+    trainsetlen = 2
+    trainset, valset = torch.utils.data.random_split(dataset, [trainsetlen, len(dataset) - trainsetlen],
+                                                     generator=torch.Generator().manual_seed(42))
     # torch.manual_seed(1)
     # torch.cuda.manual_seed(1)
     train_loader = DataLoader(trainset, batch_size=config['train_kwargs']['batch_size'], shuffle=True,
@@ -82,19 +84,19 @@ def main():
         write_to_tb(writer, ['temperature'], [T], epoch, phase=f'train')
 
         print('Train...')
-        model, _ = train_epoch(config, model, train_loader, criterion, opt, writer, epoch)
+        # model, _ = train_epoch(config, model, train_loader, criterion, opt, writer, epoch)
 
         print('Validate...')
-        validate_epoch(config, model, testing_loader, criterion_validation, writer, epoch, device)
+        # validate_epoch(config, model, testing_loader, criterion_validation, writer, epoch, device)
 
         print('Sample results...')
-        sample_results(model, testing_dataset, config['val_kwargs']['k_means']['n_clusters'],
-                       config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
-                       debug=True, dataset_name='test')
-
-        sample_results(model, valset, config['val_kwargs']['k_means']['n_clusters'],
-                       config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
-                       debug=True, seed=567, dataset_name='validation')
+        # sample_results(model, testing_dataset, config['val_kwargs']['k_means']['n_clusters'],
+        #                config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
+        #                debug=True, dataset_name='test')
+        #
+        # sample_results(model, valset, config['val_kwargs']['k_means']['n_clusters'],
+        #                config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,
+        #                debug=True, seed=567, dataset_name='validation')
 
         sample_results(model, trainset, config['val_kwargs']['k_means']['n_clusters'],
                        config['train_kwargs']['saved_images_per_epoch'], device, writer=writer, epoch_num=epoch,

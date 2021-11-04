@@ -5,7 +5,7 @@ model: deeplab
 backbone: resnet50
 backbone_kwargs:
   dilated: True
-  pretraining: resnet50_dilation.pth  # Filename of the pretraining weights (only backbone)
+  pretraining: resnet50_dilation_e10.pth  # Filename of the pretraining weights (only backbone)
   padding_mode: zeros
 model_kwargs:
   ndim: 32
@@ -24,6 +24,8 @@ moco_kwargs:
    T: 0.1 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
+   T_scheduler: constant # poly_increase, poly_decrease or constant
+   T_scheduler_rate: 0.05
 
 # Optimizer:
 epochs: 10
@@ -41,8 +43,8 @@ loss_kwargs:
 
 # Train:
 train_kwargs:
-  batch_size: 64
-  writing_per_epoch: 10
+  batch_size: 2
+  writing_per_epoch: 1
   saved_images_per_epoch: 4
   lambda_cl: 1.0  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
   dataset: ambulatorium  # This has no effect yet
@@ -50,7 +52,7 @@ train_kwargs:
 
 # Validation:
 val_kwargs:
-  batch_size: 8
+  batch_size: 2
   coarse_pixels_only: True
   dataset: retouch  # 'retouch' or 'oct_test'
   dataset_len: 128

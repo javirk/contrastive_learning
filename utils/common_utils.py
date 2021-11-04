@@ -212,7 +212,7 @@ def IoU_per_class(pred, labels, num_classes, threshold=0.5):
 
     :param pred: torch.Tensor([B, H, W], dtype=torch.int32). 0 in the coarse background, 1 and 2 for the cluster classes
     This means that we have to compare 1 and 2 to the labels, which are 0 and 1. We substract 1 to preds and the rest is
-    ok (but new background is -1)
+    ok (but now background is -1)
     :param labels:
     :param num_classes:
     :param threshold:
