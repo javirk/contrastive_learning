@@ -56,6 +56,7 @@ def get_train_transformations(s=1):
         transforms.RandomHorizontalFlip(),
         transforms.GaussianBlur(kernel_size=(3, 5), sigma=(0.1, 3))
     ]
+    augmentation = []
 
     return transforms.Compose(augmentation)
 
