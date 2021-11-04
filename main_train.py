@@ -84,7 +84,7 @@ def main():
         write_to_tb(writer, ['temperature'], [T], epoch, phase=f'train')
 
         print('Train...')
-        # model, _ = train_epoch(config, model, train_loader, criterion, opt, writer, epoch)
+        model, _ = train_epoch(config, model, train_loader, criterion, opt, writer, epoch)
 
         print('Validate...')
         # validate_epoch(config, model, testing_loader, criterion_validation, writer, epoch, device)
