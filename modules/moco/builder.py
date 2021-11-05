@@ -166,6 +166,7 @@ class ContrastiveModel(nn.Module):
             ## This is a weighted average based on the probability of each pixel
             # Weights are zero in the pixels with background and the maximum probability in the rest
             max_prob = qt_prob.max(dim=1).values.reshape(batch_size, -1, 1)
+            max_prob = torch.ones_like(max_prob)
             weights = torch.zeros(qt_pred.shape, device=qt_pred.device)
             weights = torch.where(qt_pred, max_prob, weights)  # B x H.W x 1
 

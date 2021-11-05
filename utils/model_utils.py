@@ -60,17 +60,26 @@ def load_checkpoint(config, model, optimizer, device='cpu', mode='train', error_
 
 def get_model(p):
     if p['model'] == 'deeplab':
-        backbone = resnet.__dict__[p['backbone']](pretrained=True, add_head=False,
-                                                  replace_stride_with_dilation=[False, True, True],
-                                                  padding_mode=p['backbone_kwargs']['padding_mode'])
+        if p['backbone'] == 'resnet50':
+            backbone = resnet.__dict__[p['backbone']](pretrained=True, add_head=False,
+                                                      replace_stride_with_dilation=[False, True, True],
+                                                      padding_mode=p['backbone_kwargs']['padding_mode'])
+            in_channels = 2048
+        elif p['backbone'] == 'resnet18':
+            backbone = resnet.__dict__[p['backbone']](pretrained=False, add_head=False,
+                                                      padding_mode=p['backbone_kwargs']['padding_mode'],
+                                                      in_channels=1)
+            in_channels = 512
+        else:
+            raise NotImplementedError(f'{p["backbone"]} not implemented')
 
-        # TODO: That 2048 depends on the backbone!
-        decoder = DeepLabHead(2048, p['model_kwargs']['ndim'])
+        decoder = DeepLabHead(in_channels, p['model_kwargs']['ndim'])
         return ContrastiveSegmentationModel(backbone, decoder, p['model_kwargs']['upsample'], p['num_classes'],
                                             p['model_kwargs']['ndim'],
                                             p['model_kwargs']['classify_embedding'],
                                             p['model_kwargs']['use_classification_head'],
-                                            upsample_embedding_mode=p['model_kwargs']['upsample_embedding_mode'])
+                                            upsample_embedding_mode=p['model_kwargs']['upsample_embedding_mode'],
+                                            dataset=p['dataset'])
     else:
         raise NotImplementedError(f'{p["model"]} not implemented')
 

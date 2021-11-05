@@ -1,0 +1,64 @@
+num_classes: 10
+
+# Model
+model: deeplab
+backbone: resnet18
+backbone_kwargs:
+  dilated: True
+  pretraining: imagenet  # Filename of the pretraining weights (only backbone)
+  padding_mode: zeros
+model_kwargs:
+  ndim: 32
+  upsample: True
+  upsample_embedding_mode: bilinear
+  use_classification_head: True
+  classify_embedding: True
+  pretraining: imagenet
+  freeze_backbone: True
+  coarse_threshold: 0.5
+
+checkpoint: None
+
+# MoCo
+moco_kwargs:
+   T: 0.1 # Temperature
+   m: 0.999 # Momentum
+   K: 256 # Negatives
+   T_scheduler: constant # poly_increase, poly_decrease or constant
+   T_scheduler_rate: 0.05
+
+# Optimizer:
+epochs: 10
+optimizer: sgd
+optimizer_kwargs:
+   lr: 0.01
+   weight_decay: 0.0001
+   momentum: 0.9
+   nesterov: False
+scheduler: poly
+
+# Loss
+loss_kwargs:
+  reduction: mean
+
+# Train:
+train_kwargs:
+  batch_size: 64
+  writing_per_epoch: 5
+  saved_images_per_epoch: 4
+  lambda_cl: 1.0  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
+  dataset: ambulatorium  # This has no effect yet
+  apply_otsu_thresholding: False
+
+# Validation:
+val_kwargs:
+  batch_size: 128
+  coarse_pixels_only: True
+  dataset: retouch  # 'retouch' or 'oct_test'
+  dataset_len: 128
+  k_means:
+    use_pca: True  # For now, validation during training doesn't use PCA
+    remove_background_cluster: True
+    n_clusters: 2
+  linear:
+    mean_var_normalization: True

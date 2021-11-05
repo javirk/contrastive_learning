@@ -5,7 +5,7 @@ from torch.nn import functional as F
 
 class ContrastiveSegmentationModel(nn.Module):
     def __init__(self, backbone, decoder, upsample, num_classes, ndim, classify_embedding=True, use_classification_head=True,
-                 upsample_embedding_mode=False):
+                 upsample_embedding_mode=False, dataset='OCT'):
         super(ContrastiveSegmentationModel, self).__init__()
         self.backbone = backbone  # This is the encoder
         self.upsample = upsample
@@ -23,6 +23,10 @@ class ContrastiveSegmentationModel(nn.Module):
             self.backbone.fc_new = nn.Linear(2048, num_classes)
             del self.backbone.fc
 
+        if dataset == 'OCT':
+            self.forward = self.forward_normal
+        elif dataset == 'MNIST':
+            self.forward = self.forward_mnist
 
     def forward_embeddings(self, x):
         b, c, h, w = x.shape
@@ -33,7 +37,7 @@ class ContrastiveSegmentationModel(nn.Module):
         return y
 
 
-    def forward(self, x):
+    def forward_normal(self, x, *args):
         # Standard model
         input_shape = x.shape[-2:]
         return_dict = {}
@@ -44,6 +48,40 @@ class ContrastiveSegmentationModel(nn.Module):
             if self.upsample:
                 cl_embedding = F.interpolate(cl_embedding, size=input_shape, mode=self.upsample_embedding_mode)
             return_dict['cls_emb'] = cl_embedding
+
+        embedding = self.decoder(x)  # ASPP + Conv 1x1
+
+        # Upsample to input resolution
+        if self.upsample:
+            return_dict['seg'] = F.interpolate(embedding, size=input_shape, mode='bilinear', align_corners=False)
+        else:
+            return_dict['seg'] = embedding
+
+        # Head
+        if self.use_classification_head:
+            cl = self.classification_head(embedding)
+            return_dict['cls'] = cl
+
+        return return_dict
+
+    def forward_mnist(self, x, ):
+        # Standard model
+        input_shape = x.shape[-2:]
+        return_dict = {}
+        img = x.clone()
+
+        x = self.backbone(x)
+        if self.classify_embedding:
+            segmentation = (img > 0).int()
+
+            # Coarse segmentation
+            coarse = segmentation.float()
+            coarse = nn.functional.interpolate(coarse, (14, 14))
+            coarse = nn.functional.interpolate(coarse, (28, 28))
+            coarse_onehot = coarse.repeat_interleave(2, dim=1)
+            coarse_onehot[:, 0] = (coarse[:, 0] == 0).float()
+            coarse_onehot[:, 1] = (coarse[:, 0] == 1).float()
+            return_dict['cls_emb'] = coarse_onehot
 
         embedding = self.decoder(x)  # ASPP + Conv 1x1
 

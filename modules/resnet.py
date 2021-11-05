@@ -159,7 +159,8 @@ class ResNet(nn.Module):
         replace_stride_with_dilation: Optional[List[bool]] = None,
         norm_layer: Optional[Callable[..., nn.Module]] = None,
         padding_mode: str = 'zeros',
-        add_head: bool = False
+        add_head: bool = False,
+        in_channels: int = 3
     ) -> None:
         super(ResNet, self).__init__()
         if norm_layer is None:
@@ -179,7 +180,7 @@ class ResNet(nn.Module):
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
         self.groups = groups
         self.base_width = width_per_group
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(in_channels, self.inplanes, kernel_size=7, stride=2, padding=3,
                                bias=False, padding_mode=padding_mode)
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
