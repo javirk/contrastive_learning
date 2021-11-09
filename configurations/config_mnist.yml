@@ -1,8 +1,9 @@
 num_classes: 10
+image_channels: 1
 
 # Model
 model: deeplab
-backbone: resnet18
+backbone: resnet50
 backbone_kwargs:
   dilated: True
   pretraining: imagenet  # Filename of the pretraining weights (only backbone)

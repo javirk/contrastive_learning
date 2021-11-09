@@ -1,4 +1,5 @@
 num_classes: 3
+image_channels: 3
 
 # Model
 model: deeplab
@@ -13,7 +14,7 @@ model_kwargs:
   upsample_embedding_mode: bilinear
   use_classification_head: True
   classify_embedding: True
-  pretraining: imagenet
+  pretraining: False
   freeze_backbone: True
   coarse_threshold: 0.75
 

@@ -78,9 +78,15 @@ class ContrastiveSegmentationModel(nn.Module):
             coarse = segmentation.float()
             coarse = nn.functional.interpolate(coarse, (14, 14))
             coarse = nn.functional.interpolate(coarse, (28, 28))
+
+            # This is to dilate the coarse segmentation
+            kernel = torch.ones((1, 1, 3, 3), device=x.device)
+            coarse = torch.clamp(torch.nn.functional.conv2d(coarse, kernel, padding=(1, 1)), min=0, max=1)
+
             coarse_onehot = coarse.repeat_interleave(2, dim=1)
             coarse_onehot[:, 0] = (coarse[:, 0] == 0).float()
             coarse_onehot[:, 1] = (coarse[:, 0] == 1).float()
+
             return_dict['cls_emb'] = coarse_onehot
 
         embedding = self.decoder(x)  # ASPP + Conv 1x1

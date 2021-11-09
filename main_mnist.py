@@ -26,8 +26,7 @@ def main():
     config['device'] = device
     config['dataset'] = 'MNIST'
     common_t = transforms.Compose([transforms.ToTensor()])
-    augment_t = transforms.Compose([transforms.RandomAffine(25, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=-1),
-                                    transforms.GaussianBlur(kernel_size=(3, 5), sigma=(0.1, 3))])
+    augment_t = transforms.Compose([transforms.RandomAffine(25, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=-1)])
 
     trainset = ContrastiveMNIST("mnist", train=True, download=True, transform=common_t, augment_transform=augment_t)
 

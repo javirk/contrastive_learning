@@ -139,9 +139,10 @@ class ContrastiveModel(nn.Module):
         q_prototypes = torch.zeros_like(q)  # B x pixels x dim
         q_prototypes = torch.where(q_coarse, q, q_prototypes)  # B x pixels x dim
         q_true = rearrange(q, 'b p dim -> (b p) dim')
-        q_true_prototypes = torch.index_select(q_true, index=q_true_idx, dim=0)  # True pixels x dim
+        q_true_prototypes = q_true[q_true_idx]
+        # q_true_prototypes = torch.index_select(q_true, index=q_true_idx, dim=0)  # True pixels x dim
 
-        q_prototypes = nn.functional.normalize(q_prototypes, dim=1)
+        q_prototypes = nn.functional.normalize(q_prototypes, dim=2)
         # This has virtually the same information as q_prototypes, but removing the pixels that are healthy
         q_true_prototypes = nn.functional.normalize(q_true_prototypes, dim=1)
 

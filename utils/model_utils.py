@@ -60,20 +60,24 @@ def load_checkpoint(config, model, optimizer, device='cpu', mode='train', error_
 
 def get_model(p):
     if p['model'] == 'deeplab':
+        pretrained = True if p['model_kwargs'] == 'imagenet' and p['image_channels'] == 3 else False
+        print(f'Model will be pretrained {pretrained}')
+
         if p['backbone'] == 'resnet50':
-            backbone = resnet.__dict__[p['backbone']](pretrained=True, add_head=False,
-                                                      replace_stride_with_dilation=[False, True, True],
-                                                      padding_mode=p['backbone_kwargs']['padding_mode'])
-            in_channels = 2048
-        elif p['backbone'] == 'resnet18':
-            backbone = resnet.__dict__[p['backbone']](pretrained=False, add_head=False,
+            backbone = resnet.__dict__[p['backbone']](pretrained=pretrained, add_head=False,
+                                                      replace_stride_with_dilation=[True, True, True],
                                                       padding_mode=p['backbone_kwargs']['padding_mode'],
-                                                      in_channels=1)
-            in_channels = 512
+                                                      in_channels=p['image_channels'])
+            in_channels_aspp = 2048
+        elif p['backbone'] == 'resnet18':
+            backbone = resnet.__dict__[p['backbone']](pretrained=pretrained, add_head=False,
+                                                      padding_mode=p['backbone_kwargs']['padding_mode'],
+                                                      in_channels=p['image_channels'])
+            in_channels_aspp = 512
         else:
             raise NotImplementedError(f'{p["backbone"]} not implemented')
 
-        decoder = DeepLabHead(in_channels, p['model_kwargs']['ndim'])
+        decoder = DeepLabHead(in_channels_aspp, p['model_kwargs']['ndim'])
         return ContrastiveSegmentationModel(backbone, decoder, p['model_kwargs']['upsample'], p['num_classes'],
                                             p['model_kwargs']['ndim'],
                                             p['model_kwargs']['classify_embedding'],
