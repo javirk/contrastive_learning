@@ -51,6 +51,8 @@ def sample_results(model, dataset, num_classes, number_images, device, writer=No
     input_batch = input_batch.cpu()
 
     for im, seg in zip(input_batch, pred_batch):
+        if im.size()[0] != 3:
+            im = im.repeat_interleave(3, dim=0)
         o.append(torchvision.utils.draw_segmentation_masks(im, seg, colors=colors, alpha=0.3))
 
     if writer is not None:

@@ -38,4 +38,4 @@
 ##SBATCH --array=1-100%10
 
 # Main Python code below this line
-python ./main_train.py -c configurations/config_mnist.yml -mp False
+python ./main_mnist.py -c configurations/config_mnist.yml -mp False
