@@ -104,6 +104,7 @@ def get_optimizer(p, parameters):
     elif p['optimizer'] == 'adam':
         try:
             del p['optimizer_kwargs']['momentum']
+            del p['optimizer_kwargs']['nesterov']
         except KeyError:
             pass
         optimizer = torch.optim.Adam(parameters, **p['optimizer_kwargs'])
