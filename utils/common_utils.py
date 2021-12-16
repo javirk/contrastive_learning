@@ -102,6 +102,10 @@ def get_optimizer(p, parameters):
         optimizer = torch.optim.SGD(parameters, **p['optimizer_kwargs'])
 
     elif p['optimizer'] == 'adam':
+        try:
+            del p['momentum']
+        except KeyError:
+            pass
         optimizer = torch.optim.Adam(parameters, **p['optimizer_kwargs'])
 
     else:
