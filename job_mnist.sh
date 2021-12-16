@@ -12,7 +12,7 @@
 #SBATCH --job-name="contrastive_mnist"
 
 # Partition
-#SBATCH --partition=gpu # all, gpu, phi, long
+#SBATCH --partition=gpu-invest # all, gpu, phi, long
 
 # Runtime and memory
 #SBATCH --time=24:00:00    # days-HH:MM:SS
@@ -26,7 +26,7 @@
 ##SBATCH --ntasks-per-node=1
 
 # on gpu partition
-#SBATCH --gres=gpu:gtx1080ti:1
+#SBATCH --gres=gpu:rtx3090:1
 ##SBATCH --nodelist=gnode13
 
 # Set the current working directory.

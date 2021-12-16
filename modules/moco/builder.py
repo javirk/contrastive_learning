@@ -139,8 +139,8 @@ class ContrastiveModel(nn.Module):
         q_prototypes = torch.zeros_like(q)  # B x pixels x dim
         q_prototypes = torch.where(q_coarse, q, q_prototypes)  # B x pixels x dim
         q_true = rearrange(q, 'b p dim -> (b p) dim')
-        q_true_prototypes = q_true[q_true_idx]
-        # q_true_prototypes = torch.index_select(q_true, index=q_true_idx, dim=0)  # True pixels x dim
+        q_true_prototypes = q_true[q_true_idx]  # True pixels x dim
+        # q_true_prototypes = torch.index_select(q_true, index=q_true_idx, dim=0)
 
         q_prototypes = nn.functional.normalize(q_prototypes, dim=2)
         # This has virtually the same information as q_prototypes, but removing the pixels that are healthy
@@ -190,7 +190,8 @@ class ContrastiveModel(nn.Module):
 
         positive_similarity = torch.bmm(q_prototypes, features.unsqueeze(-1)).squeeze(-1)  # shape: batch x pixels
         positive_similarity = rearrange(positive_similarity, 'b p -> (b p)')
-        positive_similarity = torch.index_select(positive_similarity, index=q_true_idx, dim=0)  # True pixels
+        positive_similarity = positive_similarity[q_true_idx]   # True pixels
+        # positive_similarity = torch.index_select(positive_similarity, index=q_true_idx, dim=0)
 
         l_batch = torch.matmul(q_true_prototypes, k_prototypes.t())  # shape: true pixels x N
         negatives = self.queue.clone().detach()  # shape: dim x negatives
@@ -221,8 +222,8 @@ class ContrastiveModel(nn.Module):
         coarse = coarse.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
         coarse = (coarse != 0).reshape(-1)  # True/False. B.H.W (pixels)
         coarse_idx = torch.nonzero(coarse).squeeze()
-
-        prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
+        prototypes = features[coarse_idx]  # True pixels x dim
+        # prototypes = torch.index_select(features, index=coarse_idx, dim=0)  # True pixels x dim
         # print(prototypes.norm(dim=1).mean())
         # prototypes = nn.functional.normalize(prototypes, dim=1)
 
