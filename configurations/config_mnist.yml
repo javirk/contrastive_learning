@@ -30,9 +30,9 @@ moco_kwargs:
 
 # Optimizer:
 epochs: 100
-optimizer: sgd
+optimizer: adam
 optimizer_kwargs:
-   lr: 0.01
+   lr: 0.001
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False
@@ -44,7 +44,7 @@ loss_kwargs:
 
 # Train:
 train_kwargs:
-  batch_size: 64
+  batch_size: 128
   writing_per_epoch: 5
   saved_images_per_epoch: 4
   lambda_cl: 0  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
