@@ -18,7 +18,7 @@ class ContrastiveSegmentationModel(nn.Module):
         if self.use_classification_head:  # This is the head after the decoder, it will be used for biomarker detection
             self.classification_head = nn.Sequential(nn.AdaptiveAvgPool2d(1),
                                                      nn.Flatten(),
-                                                     nn.Linear(512, num_classes))  # It was ndim before (if I want it to
+                                                     nn.Linear(ndim, num_classes))  # It was ndim before (if I want it to
                                                                                    # be after the decoder)
         if self.classify_embedding:  # Are the vectors that come from the encoder classified?
             self.backbone.fc_new = nn.Linear(2048, num_classes)
@@ -100,7 +100,7 @@ class ContrastiveSegmentationModel(nn.Module):
 
         # Head
         if self.use_classification_head:
-            cl = self.classification_head(x)  # x after the decoder, embedding after the decoder
+            cl = self.classification_head(embedding)  # x after the decoder, embedding after the decoder
             return_dict['cls'] = cl
 
         return return_dict
