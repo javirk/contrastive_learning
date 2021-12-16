@@ -48,7 +48,7 @@ train_kwargs:
   batch_size: 128
   writing_per_epoch: 5
   saved_images_per_epoch: 4
-  lambda_cl: 0  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
+  lambda_cl: 1  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
   dataset: ambulatorium  # This has no effect yet
   apply_otsu_thresholding: False
 
