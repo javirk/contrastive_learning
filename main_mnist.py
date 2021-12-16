@@ -18,7 +18,7 @@ from modules.loss import ContrastiveLearningLoss
 from random import randint
 from time import sleep
 from utils.hungarian import Hungarian
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 
 
 def main():
@@ -50,7 +50,7 @@ def main():
     model, opt, start_epoch = load_checkpoint(config, model, opt, device=device)
     ckpt_path = root_path.joinpath('ckpts', f'{current_time}.pth')
 
-    config['metrics'] = {'f1_score': f1_score}
+    config['metrics'] = {'f1_score': f1_score, 'accuracy': accuracy_score}
     print(f'Defined metrics {config["metrics"]}')
 
     config['writing_freq'] = max(1, len(trainset) // (config['train_kwargs']['writing_per_epoch'] * config['train_kwargs']['batch_size']))

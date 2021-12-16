@@ -30,8 +30,7 @@ def train_step(config, data, model, criterion_dict, optimizer):
         m = {}
         for name, metric in config['metrics'].items():
             if name == 'f1_score':
-                # Use a classification threshold of 0.1
-                m[f'{name}'] = metric(y_true, y_pred, average='macro')  # I think
+                m[f'{name}'] = metric(y_true, y_pred, average='micro')  # I think
             else:
                 m[f'{name}'] = metric(y_true.astype('uint8'), y_pred)
     else:
