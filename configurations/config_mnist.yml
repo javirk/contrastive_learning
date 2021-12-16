@@ -1,5 +1,6 @@
 num_classes: 10
 image_channels: 1
+dataset_type: binary  # binary or multiclass
 
 # Model
 model: deeplab

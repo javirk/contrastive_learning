@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from sklearn.cluster import KMeans
 from utils.logs_utils import write_to_tb, update_metrics_dict
 from utils.common_utils import IoU_per_class, apply_criterion
@@ -21,17 +22,30 @@ def train_step(config, data, model, criterion_dict, optimizer):
     loss.backward()
     optimizer.step()
 
-    ## Now compute the metrics and return
-    y_pred = torch.sigmoid(class_prediction).detach().cpu().numpy().ravel()
-    y_true = labels.detach().cpu().numpy().ravel()
+    if config['dataset_type'] == 'binary':
+        ## Now compute the metrics and return
+        y_pred = torch.softmax(class_prediction, dim=1).argmax(dim=1).detach().cpu().numpy()
+        y_true = labels.detach().cpu().numpy()
 
-    m = {}
-    for name, metric in config['metrics'].items():
-        if name == 'f1_score':
-            # Use a classification threshold of 0.1
-            m[f'{name}'] = metric(y_true > 0, y_pred > 0.1)
-        else:
-            m[f'{name}'] = metric(y_true.astype('uint8'), y_pred)
+        m = {}
+        for name, metric in config['metrics'].items():
+            if name == 'f1_score':
+                # Use a classification threshold of 0.1
+                m[f'{name}'] = metric(y_true, y_pred, average='macro')  # I think
+            else:
+                m[f'{name}'] = metric(y_true.astype('uint8'), y_pred)
+    else:
+        ## Now compute the metrics and return
+        y_pred = torch.sigmoid(class_prediction).detach().cpu().numpy()
+        y_true = labels.detach().cpu().numpy()
+
+        m = {}
+        for name, metric in config['metrics'].items():
+            if name == 'f1_score':
+                # Use a classification threshold of 0.1
+                m[f'{name}'] = metric(y_true, y_pred)
+            else:
+                m[f'{name}'] = metric(y_true.astype('uint8'), y_pred)
 
     return model, m, loss.item(), cl_loss.item(), pos.mean().item(), neg.mean()
 
