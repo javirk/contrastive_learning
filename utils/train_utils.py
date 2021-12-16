@@ -15,7 +15,7 @@ def train_step(config, data, model, criterion_dict, optimizer):
     neg, pos, class_prediction = model(input_batch, transformed_batch, healthy_batch)
 
     cl_loss = criterion_dict['CL'](pos, neg)
-    class_loss = criterion_dict['label'](class_prediction, labels.float())
+    class_loss = criterion_dict['label'](class_prediction, labels)
     loss = config['train_kwargs']['lambda_cl'] * cl_loss + class_loss
 
     loss.backward()

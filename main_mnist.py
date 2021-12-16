@@ -43,7 +43,7 @@ def main():
     opt = get_optimizer(config, model.parameters())
     print(f'Chosen optimizer {opt}')
 
-    label_criterion = nn.BCEWithLogitsLoss()
+    label_criterion = nn.CrossEntropyLoss()
     cl_criterion = ContrastiveLearningLoss(reduction='mean')
     criterion = {'label': label_criterion, 'CL': cl_criterion}
 

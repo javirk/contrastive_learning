@@ -24,7 +24,7 @@ class ContrastiveMNIST(MNIST):
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        target = nn.functional.one_hot(target, num_classes=10)
+        # target = nn.functional.one_hot(target, num_classes=10)
 
         segmentation = (img > 0).int()
 
