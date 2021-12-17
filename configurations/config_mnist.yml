@@ -23,7 +23,7 @@ checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.5 # Temperature
+   T: 0.1 # Temperature
    m: 0.999 # Momentum
    K: 128 # Negatives
    T_scheduler: constant # poly_increase, poly_decrease or constant
@@ -33,7 +33,7 @@ moco_kwargs:
 epochs: 100
 optimizer: adam
 optimizer_kwargs:
-   lr: 0.001
+   lr: 0.01
    weight_decay: 0.0001
    momentum: 0.9
    nesterov: False
