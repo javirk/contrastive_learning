@@ -16,10 +16,15 @@ class ContrastiveMNIST(MNIST):
         # to return a PIL Image
         img = Image.fromarray(img.numpy(), mode='L')
 
+        # Just trying something new
+        img_transform = self.data[torch.randint(0, len(self))]
+        img_transform = Image.fromarray(img_transform.numpy(), mode='L')
+
         if self.transform is not None:
             img = self.transform(img)
+            img_transform = self.transform(img_transform)
 
-        img_transform = self.augment_transform(img)
+        img_transform = self.augment_transform(img_transform)
 
         if self.target_transform is not None:
             target = self.target_transform(target)
