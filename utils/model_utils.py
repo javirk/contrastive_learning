@@ -74,7 +74,7 @@ def get_model(p):
                                                       replace_stride_with_dilation=[True, True, True],
                                                       padding_mode=p['backbone_kwargs']['padding_mode'],
                                                       in_channels=p['image_channels'])
-            in_channels_aspp = 512
+            in_channels_aspp = 2048
         else:
             raise NotImplementedError(f'{p["backbone"]} not implemented')
 
