@@ -71,6 +71,7 @@ def get_model(p):
             in_channels_aspp = 2048
         elif p['backbone'] == 'resnet18':
             backbone = resnet.__dict__[p['backbone']](pretrained=pretrained, add_head=False,
+                                                      replace_stride_with_dilation=[True, True, True],
                                                       padding_mode=p['backbone_kwargs']['padding_mode'],
                                                       in_channels=p['image_channels'])
             in_channels_aspp = 512
