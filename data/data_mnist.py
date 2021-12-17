@@ -17,7 +17,7 @@ class ContrastiveMNIST(MNIST):
         img = Image.fromarray(img.numpy(), mode='L')
 
         # Just trying something new
-        img_transform = self.data[torch.randint(0, len(self))]
+        img_transform = self.data[torch.randint(high=len(self), size=[1])]
         img_transform = Image.fromarray(img_transform.numpy(), mode='L')
 
         if self.transform is not None:
