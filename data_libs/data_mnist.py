@@ -39,7 +39,7 @@ class ContrastiveMNIST(MNIST):
         # coarse = nn.functional.interpolate(coarse, (28, 28))
         # coarse = coarse.squeeze(0)
 
-        negative_samples = torch.zeros_like(img)
+        negative_samples = torch.rand(img.shape) * 0.5
 
         return {'images': img, 'segmentations': segmentation, 'healthy_images': negative_samples,
                 'transformed_images': img_transform, 'labels': target}
