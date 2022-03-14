@@ -7,7 +7,7 @@ from pathlib import Path
 
 from utils.common_utils import read_config, prepare_run
 from modules.moco.builder import ContrastiveModel
-from data.data_mnist import ContrastiveMNIST
+from data_libs.data_mnist import ContrastiveMNIST
 from utils.common_utils import get_optimizer, adjust_learning_rate, str2bool, get_paths_validation
 from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp, overwrite_checkpoint, \
     adjust_temperature
@@ -27,7 +27,7 @@ def main():
     config['device'] = device
     config['dataset'] = 'MNIST'
     common_t = transforms.Compose([transforms.ToTensor()])
-    augment_t = transforms.Compose([transforms.RandomAffine(25, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=-1)])
+    augment_t = transforms.Compose([transforms.RandomAffine(25, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=0)])
 
     trainset = ContrastiveMNIST("mnist", train=True, download=True, transform=common_t, augment_transform=augment_t)
 

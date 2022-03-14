@@ -7,7 +7,7 @@ from pathlib import Path
 
 from utils.common_utils import read_config, prepare_run
 from modules.moco.builder import ContrastiveModel
-from data.data_retriever import ContrastiveDataset, SegmentationDataset, Resize
+from data_libs.data_retriever import ContrastiveDataset, SegmentationDataset, Resize
 from utils.common_utils import get_train_transformations, get_val_transformations, get_optimizer, adjust_learning_rate, \
     str2bool, get_paths_validation
 from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp, overwrite_checkpoint, \

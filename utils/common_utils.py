@@ -8,8 +8,8 @@ import torchvision.transforms as transforms
 import math
 import numpy as np
 import sys
-from data.data_retriever import SegmentationDataset, ContrastiveDataset
-import data.transforms_segmentation as t
+from data_libs.data_retriever import SegmentationDataset, ContrastiveDataset
+import data_libs.transforms_segmentation as t
 
 
 def copy_file(src, dst):

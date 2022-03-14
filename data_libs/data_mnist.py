@@ -31,7 +31,7 @@ class ContrastiveMNIST(MNIST):
 
         # target = nn.functional.one_hot(target, num_classes=10)
 
-        segmentation = (img > 0).int()
+        segmentation = (img > 0.5).int()
 
         # Coarse segmentation
         # coarse = segmentation.unsqueeze(0).float()

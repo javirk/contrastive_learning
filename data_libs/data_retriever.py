@@ -105,7 +105,7 @@ class SegmentationDataset(Dataset):
 class ContrastiveDataset(Dataset):
     """OCT HDF5 dataset."""
 
-    def __init__(self, hdf5_file, image_set="data/slices", label_set="data/markers", common_transform=None,
+    def __init__(self, hdf5_file, image_set="data_libs/slices", label_set="data_libs/markers", common_transform=None,
                  augment_transform=None, n_classes=10):
         """
         labels: [Healthy, SRF, IRF, HF, Drusen, RPD, ERM, GA, ORA, FPED]

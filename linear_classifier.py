@@ -8,7 +8,7 @@ from pathlib import Path
 
 from utils.common_utils import read_config
 from modules.moco.builder import ContrastiveModel
-from data.data_retriever import ContrastiveDataset
+from data_libs.data_retriever import ContrastiveDataset
 import utils.common_utils as u
 from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pretrained_aspp
 from evaluation_utils.linear_utils import save_linear_embeddings_to_disk
