@@ -10,7 +10,7 @@ backbone_kwargs:
   pretraining: imagenet  # Filename of the pretraining weights (only backbone)
   padding_mode: zeros
 model_kwargs:
-  ndim: 32
+  ndim: 256
   upsample: True
   upsample_embedding_mode: bilinear
   use_classification_head: True
@@ -23,9 +23,9 @@ checkpoint: None
 
 # MoCo
 moco_kwargs:
-   T: 0.5 # Temperature
+   T: 0.1 # Temperature
    m: 0.999 # Momentum
-   K: 128 # Negatives
+   K: 256 # Negatives
    T_scheduler: constant # poly_increase, poly_decrease or constant
    T_scheduler_rate: 0.05
 
