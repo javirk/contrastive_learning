@@ -87,7 +87,7 @@ class ContrastiveSegmentationModel(nn.Module):
             coarse = nn.functional.interpolate(coarse, (28, 28))
 
             # This dilates the coarse segmentation
-            kernel = torch.ones((1, 1, 3, 3), device=x.device)
+            kernel = torch.ones((1, 1, 5, 5), device=x.device)
             coarse = torch.clamp(nn.functional.conv2d(coarse, kernel, padding=(1, 1)), min=0, max=1)
 
             coarse_onehot = coarse.repeat_interleave(2, dim=1)
