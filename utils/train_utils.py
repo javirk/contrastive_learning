@@ -56,7 +56,8 @@ def train_step(config, data, model, criterion_dict, optimizer):
             else:
                 m[f'{name}'] = metric(y_true.astype('uint8'), y_pred)
 
-    return model, m, loss.item(), cl_loss.item(), pos.mean().item(), neg.mean()
+    # return model, m, loss.item(), cl_loss.item(), pos.mean().item(), neg.mean()
+    return model, m, loss.item(), cl_loss.item(), 0, 0
 
 
 def validation_step(config, data, model, kmeans, criterion, device):
