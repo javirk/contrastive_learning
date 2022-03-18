@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn.functional import cross_entropy
 from sklearn.cluster import KMeans
 from utils.logs_utils import write_to_tb, update_metrics_dict
 from utils.common_utils import IoU_per_class, apply_criterion
@@ -11,11 +12,20 @@ def train_step(config, data, model, criterion_dict, optimizer):
     input_batch = data['images'].to(config['device'])
     transformed_batch = data['transformed_images'].to(config['device'])
     healthy_batch = data['healthy_images'].to(config['device'])
-    labels = data['labels'].to(config['device'])
+    # labels = data['labels'].to(config['device'])
 
-    neg, pos, sal_prediction, sal_target = model(input_batch, transformed_batch, healthy_batch)
+    # neg, pos, sal_prediction, sal_target = model(input_batch, transformed_batch, healthy_batch)
+    logits, labels, sal_prediction, sal_target = model(input_batch, transformed_batch, healthy_batch)
 
-    cl_loss = criterion_dict['CL'](pos, neg)
+    # Use E-Net weighting for calculating the pixel-wise loss.
+    uniq, freq = torch.unique(labels, return_counts=True)
+    p_class = torch.zeros(logits.shape[1], dtype=torch.float32).to(config['device'])
+    p_class_non_zero_classes = freq.float() / labels.numel()
+    p_class[uniq] = p_class_non_zero_classes
+    w_class = 1 / torch.log(1.02 + p_class)
+    cl_loss = cross_entropy(logits, labels, weight=w_class, reduction='mean')
+
+    # cl_loss = criterion_dict['CL'](pos, neg)
     class_loss = criterion_dict['label'](sal_prediction, sal_target)
     loss = config['train_kwargs']['lambda_cl'] * cl_loss + class_loss
 

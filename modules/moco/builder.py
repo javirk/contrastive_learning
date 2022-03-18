@@ -127,24 +127,30 @@ class ContrastiveModel(nn.Module):
         qdict = self.model_q(im_q)
         sal_prediction = qdict['sal']
         q = qdict['seg']  # queries: B x dim x H x W
-        q = rearrange(q, 'b dim h w -> b (h w) dim')  # queries: B x pixels x dim
+        q = nn.functional.normalize(q, dim=1)
+        q = rearrange(q, 'b dim h w -> (b h w) dim')  # queries: pixels x dim
 
         q_coarse = qdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. Coarse embeddings
 
         q_coarse = (torch.softmax(q_coarse, dim=1) > self.coarse_threshold)
         q_coarse = q_coarse.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
-        q_coarse = (q_coarse != 0).reshape(batch_size, -1, 1)  # True/False. Shape: B x pixels x 1
-        q_true_idx = torch.nonzero(q_coarse.reshape(-1)).squeeze()  # Indexes. True pixels
 
-        q_prototypes = torch.zeros_like(q)  # B x pixels x dim
-        q_prototypes = torch.where(q_coarse, q, q_prototypes)  # B x pixels x dim
-        q_true = rearrange(q, 'b p dim -> (b p) dim')
-        q_true_prototypes = q_true[q_true_idx]  # True pixels x dim
-        # q_true_prototypes = torch.index_select(q_true, index=q_true_idx, dim=0)
+        with torch.no_grad():
+            offset = torch.arange(0, 2 * batch_size, 2).to(q_coarse.device)
+            sal_q = (q_coarse + torch.reshape(offset, [-1, 1, 1])) * q_coarse # all bg's to 0
+            sal_q = sal_q.view(-1)
+            mask_indexes = torch.nonzero((sal_q)).view(-1).squeeze()
+            sal_q = torch.index_select(sal_q, index=mask_indexes, dim=0) // 2
 
-        q_prototypes = nn.functional.normalize(q_prototypes, dim=2)
-        # This has virtually the same information as q_prototypes, but removing the pixels that are healthy
-        q_true_prototypes = nn.functional.normalize(q_true_prototypes, dim=1)
+        # q_prototypes = torch.zeros_like(q)  # B x pixels x dim
+        # q_prototypes = torch.where(q_coarse, q, q_prototypes)  # B x pixels x dim
+        # q_true = rearrange(q, 'b p dim -> (b p) dim')
+        # q_true_prototypes = q_true[q_true_idx]  # True pixels x dim
+        # # q_true_prototypes = torch.index_select(q_true, index=q_true_idx, dim=0)
+        #
+        # q_prototypes = nn.functional.normalize(q_prototypes, dim=2)
+        # # This has virtually the same information as q_prototypes, but removing the pixels that are healthy
+        # q_true_prototypes = nn.functional.normalize(q_true_prototypes, dim=1)
 
         # compute positive prototypes
         with torch.no_grad():
@@ -152,61 +158,58 @@ class ContrastiveModel(nn.Module):
 
             qtdict = self.model_k(im_qt)
             features = qtdict['seg']  # queries transformed: B x dim x H x W
-            features = rearrange(features, 'b d h w -> b d (h w)')
+            # features = rearrange(features, 'b d h w -> b d (h w)')
             features = nn.functional.normalize(features, dim=1)  # B x dim x h.w
 
-            qt_pred = qtdict['cls_emb']  # predictions of the transformed queries: B x classes x H x W. This comes
-            # from coarse embeddings
-            qt_prob = torch.softmax(qt_pred, dim=1)
+            sal_features = qtdict['cls_emb'][:,1]  # THIS ONLY WORKS FOR MNIST
 
-            qt_pred = (qt_prob > self.coarse_threshold)
-            qt_pred = qt_pred.int().argmax(dim=1)  # Prediction of each pixel (coarse). B x H x W
-            qt_pred = (qt_pred != 0).reshape(batch_size, -1, 1)  # True/False. B x H.W x 1
-            # qt_pred_idx = torch.nonzero(qt_pred).squeeze()
+            # prototypes k
+            features = features.reshape(batch_size, self.dim, -1) # B x dim x H.W
+            sal_features = sal_features.reshape(batch_size, -1, 1).type(features.dtype) # B x H.W x 1
+            prototypes_foreground = torch.bmm(features, sal_features).squeeze() # B x dim
+            prototypes = nn.functional.normalize(prototypes_foreground, dim=1)
 
-            ## This is a weighted average based on the probability of each pixel
-            # Weights are zero in the pixels with background and the maximum probability in the rest
-            max_prob = qt_prob.max(dim=1).values.reshape(batch_size, -1, 1)
-            max_prob = torch.ones_like(max_prob)
-            weights = torch.zeros(qt_pred.shape, device=qt_pred.device)
-            weights = torch.where(qt_pred, max_prob, weights)  # B x H.W x 1
+        # q: pixels x dim
+        # k: pixels x dim
+        # prototypes_k: proto x dim
+        q = torch.index_select(q, index=mask_indexes, dim=0)
+        l_batch = torch.matmul(q, prototypes.t())   # shape: pixels x proto
+        negatives = self.queue.clone().detach()     # shape: dim x negatives
+        l_mem = torch.matmul(q, negatives)          # shape: pixels x negatives (Memory bank)
+        logits = torch.cat([l_batch, l_mem], dim=1) # pixels x (proto + negatives)
 
-            weights_sum = torch.clamp(torch.sum(weights, dim=1), min=1)
-            # Do the weighted average
-            features = torch.bmm(features, weights).squeeze(-1) / weights_sum  # B x dim
-            features = nn.functional.normalize(features, dim=1)
-            assert not features.isnan().any()
-
-        # compute key prototypes. Negatives
-        with torch.no_grad():  # no gradient to keys
-            kdict = self.model_k(im_k)  # keys: N x dim x H x W
-            k = kdict['seg']
-            if self.apply_otsu:
-                k_prototypes = otsu_thresholding(im_k, k)
-            else:
-                k_prototypes = k.mean(dim=(2, 3))  # N x dim
-
-            k_prototypes = nn.functional.normalize(k_prototypes, dim=1)
-
-        positive_similarity = torch.bmm(q_prototypes, features.unsqueeze(-1)).squeeze(-1)  # shape: batch x pixels
-        positive_similarity = rearrange(positive_similarity, 'b p -> (b p)')
-        positive_similarity = positive_similarity[q_true_idx]   # True pixels
-        # positive_similarity = torch.index_select(positive_similarity, index=q_true_idx, dim=0)
-
-        l_batch = torch.matmul(q_true_prototypes, k_prototypes.t())  # shape: true pixels x N
-        negatives = self.queue.clone().detach()  # shape: dim x negatives
-
-        l_mem = torch.matmul(q_true_prototypes, negatives)  # shape: true pixels x negatives in memory
-        negative_similarity = torch.cat([l_batch, l_mem], dim=-1)  # pixels x (negatives batch + negatives memory)
+        # # compute key prototypes. Negatives
+        # with torch.no_grad():  # no gradient to keys
+        #     kdict = self.model_k(im_k)  # keys: N x dim x H x W
+        #     k = kdict['seg']
+        #     if self.apply_otsu:
+        #         k_prototypes = otsu_thresholding(im_k, k)
+        #     else:
+        #         k_prototypes = k.mean(dim=(2, 3))  # N x dim
+        #
+        #     k_prototypes = nn.functional.normalize(k_prototypes, dim=1)
+        #
+        # positive_similarity = torch.bmm(q_prototypes, features.unsqueeze(-1)).squeeze(-1)  # shape: batch x pixels
+        # positive_similarity = rearrange(positive_similarity, 'b p -> (b p)')
+        # positive_similarity = positive_similarity[q_true_idx]   # True pixels
+        # # positive_similarity = torch.index_select(positive_similarity, index=q_true_idx, dim=0)
+        #
+        # l_batch = torch.matmul(q_true_prototypes, k_prototypes.t())  # shape: true pixels x N
+        # negatives = self.queue.clone().detach()  # shape: dim x negatives
+        #
+        # l_mem = torch.matmul(q_true_prototypes, negatives)  # shape: true pixels x negatives in memory
+        # negative_similarity = torch.cat([l_batch, l_mem], dim=-1)  # pixels x (negatives batch + negatives memory)
 
         # apply temperature
-        positive_similarity /= self.T
-        negative_similarity /= self.T
+        logits /= self.T
+        # negative_similarity /= self.T
 
         # dequeue and enqueue
-        self._dequeue_and_enqueue(k_prototypes)
+        self._dequeue_and_enqueue(prototypes)
 
-        return negative_similarity, positive_similarity, sal_prediction.squeeze(1), qdict['cls_emb'][:,0]
+        return logits, sal_q, sal_prediction.squeeze(1), qdict['cls_emb'][:,0]
+
+        # return negative_similarity, positive_similarity, sal_prediction.squeeze(1), qdict['cls_emb'][:,0]
 
     @torch.no_grad()
     def forward_validation(self, im, kmeans, keep_coarse_bg=False):
