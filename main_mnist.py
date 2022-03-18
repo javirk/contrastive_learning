@@ -14,7 +14,7 @@ from utils.model_utils import load_checkpoint, load_pretrained_backbone, load_pr
 from utils.train_utils import train_epoch, validate_epoch
 from utils.logs_utils import write_to_tb
 from evaluation_utils.kmeans_utils import sample_results
-from modules.loss import ContrastiveLearningLoss
+from modules.loss import ContrastiveLearningLoss, BalancedCrossEntropyLoss
 from random import randint
 from time import sleep
 from utils.hungarian import Hungarian
@@ -43,14 +43,16 @@ def main():
     opt = get_optimizer(config, model.parameters())
     print(f'Chosen optimizer {opt}')
 
-    label_criterion = nn.CrossEntropyLoss()
+    # label_criterion = nn.CrossEntropyLoss()
+    label_criterion = BalancedCrossEntropyLoss()
     cl_criterion = ContrastiveLearningLoss(reduction='mean')
     criterion = {'label': label_criterion, 'CL': cl_criterion}
 
     model, opt, start_epoch = load_checkpoint(config, model, opt, device=device)
     ckpt_path = root_path.joinpath('ckpts', f'{current_time}.pth')
 
-    config['metrics'] = {'f1_score': f1_score, 'accuracy': accuracy_score}
+    # config['metrics'] = {'f1_score': f1_score, 'accuracy': accuracy_score}
+    config['metrics'] = {}
     print(f'Defined metrics {config["metrics"]}')
 
     config['writing_freq'] = max(1, len(trainset) // (config['train_kwargs']['writing_per_epoch'] * config['train_kwargs']['batch_size']))

@@ -125,7 +125,7 @@ class ContrastiveModel(nn.Module):
         batch_size, _, h, w = im_q.size()
 
         qdict = self.model_q(im_q)
-        class_prediction = qdict['cls']
+        sal_prediction = qdict['sal']
         q = qdict['seg']  # queries: B x dim x H x W
         q = rearrange(q, 'b dim h w -> b (h w) dim')  # queries: B x pixels x dim
 
@@ -206,7 +206,7 @@ class ContrastiveModel(nn.Module):
         # dequeue and enqueue
         self._dequeue_and_enqueue(k_prototypes)
 
-        return negative_similarity, positive_similarity, class_prediction
+        return negative_similarity, positive_similarity, sal_prediction.squeeze(1), qdict['cls_emb'][:,0]
 
     @torch.no_grad()
     def forward_validation(self, im, kmeans, keep_coarse_bg=False):

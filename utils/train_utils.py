@@ -13,10 +13,10 @@ def train_step(config, data, model, criterion_dict, optimizer):
     healthy_batch = data['healthy_images'].to(config['device'])
     labels = data['labels'].to(config['device'])
 
-    neg, pos, class_prediction = model(input_batch, transformed_batch, healthy_batch)
+    neg, pos, sal_prediction, sal_target = model(input_batch, transformed_batch, healthy_batch)
 
     cl_loss = criterion_dict['CL'](pos, neg)
-    class_loss = criterion_dict['label'](class_prediction, labels)
+    class_loss = criterion_dict['label'](sal_prediction, sal_target)
     loss = config['train_kwargs']['lambda_cl'] * cl_loss + class_loss
 
     loss.backward()
@@ -24,18 +24,18 @@ def train_step(config, data, model, criterion_dict, optimizer):
 
     if config['dataset_type'] == 'binary':
         ## Now compute the metrics and return
-        y_pred = torch.softmax(class_prediction, dim=1).argmax(dim=1).detach().cpu().numpy()
+        y_pred = torch.softmax(sal_prediction, dim=1).argmax(dim=1).detach().cpu().numpy()
         y_true = labels.detach().cpu().numpy()
 
         m = {}
-        for name, metric in config['metrics'].items():
+        for name, metric in config['metrics'].items(): # THIS IS WRONG NOW, but we don't enter here
             if name == 'f1_score':
                 m[f'{name}'] = metric(y_true, y_pred, average='macro')  # I think
             else:
                 m[f'{name}'] = metric(y_true.astype('uint8'), y_pred)
     else:
         ## Now compute the metrics and return
-        y_pred = torch.sigmoid(class_prediction).detach().cpu().numpy()
+        y_pred = torch.sigmoid(sal_prediction).detach().cpu().numpy()
         y_true = labels.detach().cpu().numpy()
 
         m = {}

@@ -4,7 +4,8 @@ from torch import nn
 from torch.nn import functional as F
 
 class ContrastiveSegmentationModel(nn.Module):
-    def __init__(self, backbone, decoder, upsample, num_classes, ndim, classify_embedding=True, use_classification_head=True,
+    def __init__(self, backbone, decoder, upsample, num_classes, ndim, classify_embedding=True,
+                 use_classification_head=True,
                  upsample_embedding_mode=False, dataset='OCT'):
         super(ContrastiveSegmentationModel, self).__init__()
         self.backbone = backbone  # This is the encoder
@@ -16,10 +17,15 @@ class ContrastiveSegmentationModel(nn.Module):
         self.decoder = decoder
 
         if self.use_classification_head:  # This is the head after the decoder, it will be used for biomarker detection
-            self.classification_head = nn.Sequential(nn.AdaptiveAvgPool2d(1),
-                                                     nn.Flatten(),
-                                                     nn.Linear(ndim, num_classes))  # It was ndim before (if I want it to
-                                                                                   # be after the decoder)
+            # self.classification_head = nn.Sequential(nn.AdaptiveAvgPool2d(1),
+            #                                          nn.Flatten(),
+            #                                          nn.Linear(ndim, num_classes))  # It was ndim before (if I want it to
+            #                                                                        # be after the decoder)
+            self.head = decoder[-1]
+            decoder[-1] = nn.Identity()
+            self.decoder = decoder
+            self.classification_head = nn.Conv2d(self.head.in_channels, 1, 1, bias=False)
+
         if self.classify_embedding:  # Are the vectors that come from the encoder classified?
             self.backbone.fc_new = nn.Linear(2048, num_classes)
             del self.backbone.fc
@@ -91,16 +97,19 @@ class ContrastiveSegmentationModel(nn.Module):
             return_dict['cls_emb'] = coarse_onehot
 
         embedding = self.decoder(x)  # ASPP + Conv 1x1
-
-        # Upsample to input resolution
-        if self.upsample:
-            return_dict['seg'] = F.interpolate(embedding, size=input_shape, mode='bilinear', align_corners=False)
-        else:
-            return_dict['seg'] = embedding
+        x = self.head(embedding)
 
         # Head
         if self.use_classification_head:
-            cl = self.classification_head(embedding)  # x after the decoder, embedding after the decoder
-            return_dict['cls'] = cl
+            sal = self.classification_head(embedding)  # x after the decoder, embedding after the decoder
+            return_dict['sal'] = sal
+
+        # Upsample to input resolution
+        if self.upsample:
+            return_dict['seg'] = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
+            if self.use_classification_head:
+                return_dict['sal'] = F.interpolate(sal, size=input_shape, mode='bilinear', align_corners=False)
+        else:
+            return_dict['seg'] = x
 
         return return_dict
