@@ -10,7 +10,7 @@ backbone_kwargs:
   pretraining: imagenet  # Filename of the pretraining weights (only backbone)
   padding_mode: zeros
 model_kwargs:
-  ndim: 256
+  ndim: 32
   upsample: True
   upsample_embedding_mode: bilinear
   use_classification_head: True
@@ -25,7 +25,7 @@ checkpoint: None
 moco_kwargs:
    T: 0.5 # Temperature
    m: 0.999 # Momentum
-   K: 256 # Negatives
+   K: 128 # Negatives
    T_scheduler: constant # poly_increase, poly_decrease or constant
    T_scheduler_rate: 0.05
 
@@ -45,7 +45,7 @@ loss_kwargs:
 
 # Train:
 train_kwargs:
-  batch_size: 128
+  batch_size: 64
   writing_per_epoch: 5
   saved_images_per_epoch: 4
   lambda_cl: 1  # This is applied to contrastive learning loss (loss = lambda*cl_loss + detection loss)
