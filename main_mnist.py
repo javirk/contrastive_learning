@@ -30,9 +30,12 @@ def main():
     augment_t = transforms.Compose([transforms.RandomAffine(25, translate=(0.25, 0.25), scale=(0.8, 1.2), fill=0)])
 
     trainset = ContrastiveMNIST("mnist", train=True, download=True, transform=common_t, augment_transform=augment_t)
+    testset = ContrastiveMNIST("mnist", train=False, download=True, transform=common_t, augment_transform=augment_t)
 
     train_loader = DataLoader(trainset, batch_size=config['train_kwargs']['batch_size'], shuffle=True,
                               num_workers=num_workers, drop_last=True)
+    testing_loader = DataLoader(testset, batch_size=config['train_kwargs']['batch_size'], shuffle=False,
+                                num_workers=num_workers, drop_last=False)
 
     model = ContrastiveModel(config)
     print(f"Lets use {torch.cuda.device_count()} GPUs!")
@@ -47,6 +50,7 @@ def main():
     label_criterion = BalancedCrossEntropyLoss()
     cl_criterion = ContrastiveLearningLoss(reduction='mean')
     criterion = {'label': label_criterion, 'CL': cl_criterion}
+    criterion_validation = Hungarian()
 
     model, opt, start_epoch = load_checkpoint(config, model, opt, device=device)
     ckpt_path = root_path.joinpath('ckpts', f'{current_time}.pth')
@@ -69,7 +73,7 @@ def main():
         model, _ = train_epoch(config, model, train_loader, criterion, opt, writer, epoch)
 
         print('Validate...')
-        # validate_epoch(config, model, testing_loader, criterion_validation, writer, epoch, device)
+        validate_epoch(config, model, testing_loader, criterion_validation, writer, epoch, device)
 
         print('Sample results...')
         # sample_results(model, testing_dataset, config['val_kwargs']['k_means']['n_clusters'],
