@@ -223,6 +223,8 @@ def IoU_per_class(pred, labels, num_classes, threshold=0.5):
     :param threshold:
     :return:
     '''
+    if labels.dim() > 3:
+        labels = labels.squeeze()
     pred = pred - 1
     iou = torch.zeros([pred.shape[0], num_classes, num_classes], dtype=torch.float)
     for i_pred in range(num_classes):
